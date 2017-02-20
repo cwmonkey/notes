@@ -64,14 +64,6 @@ Note.prototype.save = function(params) {
     this.updated = Date.now().toString(36);
   }
 
-  if ( ignore_next_update === this.id ) {
-    ignore_next_update = null;
-  } else {
-    this.$el
-      .find('.__notes--body').html(this.md(this.body)).end()
-      ;
-  }
-
   if ( this.deleted ) {
     this.del();
   }

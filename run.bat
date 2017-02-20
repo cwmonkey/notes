@@ -1,1 +1,1 @@
-bundle exec jekyll serve --watch --config _config.local.yml,_config.yml
+bundle exec jekyll serve --host=0.0.0.0 --port 4000 --watch --config _config.local.yml,_config.yml --incremental

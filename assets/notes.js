@@ -168,7 +168,8 @@ var autosize = function(el) {
  // Notes
 /////////////////////////////
 
-var save_notes = function() {
+var save_notes = function(skip_gd) {
+  debug && console.log('save_notes', skip_gd);
   var snotes = {};
   for ( var key in notes ) {
     if ( notes.hasOwnProperty(key) ) {
@@ -177,8 +178,11 @@ var save_notes = function() {
   }
 
   snotes = JSON.stringify(snotes);
-  localStorage.setItem(file_name, snotes, true);
-  gdsaver_notes.save(snotes, true);
+  localStorage.setItem(file_name, snotes);
+
+  if ( !skip_gd ) {
+    gdsaver_notes.save(snotes, true);
+  }
 };
 
 var add_note = function(values) {
@@ -244,8 +248,12 @@ var sync = function(data, local) {
   }
 
   if ( changed && !local ) {
-    localStorage.setItem(file_name, JSON.stringify(notes), true);
+    save_notes(true);
   }
+
+  setTimeout(function() {
+    scroll_notes_window();
+  }, 10);
   debug && console.log('sync end');
 };
 
@@ -275,8 +283,6 @@ var notes_loader = new GDLoader(gd, file_name, undefined, sync);
     debug && console.log('loadScript failed');
   });*/
 
-gd_load_notes(true);
-
 var note_tpl_html = $('[data-type="note-tpl"]').html();
 var note_tpl = compile(note_tpl_html);
 
@@ -299,7 +305,11 @@ for ( var key in notes ) {
   }
 }
 
-scroll_notes_window();
+setTimeout(function() {
+  scroll_notes_window();
+}, 10);
+
+gd_load_notes(true);
 
 $(document)
   .delegate('[data-type="add-edit"] textarea', 'input drop paste cut delete click', function() {
@@ -319,6 +329,10 @@ $(document)
     var note = add_note(values);
     save_notes();
     scroll_notes_window();
+
+    setTimeout(function() {
+      scroll_notes_window();
+    }, 10);
   })
   ;
 
