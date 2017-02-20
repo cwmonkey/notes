@@ -1,0 +1,32 @@
+---
+layout: default
+---
+
+<div class="app_wrapper" data-type="notes-wrapper">
+  <section class="secondary">
+    <ul class="sections">
+      <li class="item"><button class="section" data-type="section" data-value="0">General</button></li>
+    </ul>
+  </section>
+  <section class="primary">
+    <section class="gd">
+      <button data-type="gddisable">Disable Google Drive</button>
+      <button data-type="gdauthorize">Authorize Google Drive</button>
+      <button data-type="gdsync">Sync Google Drive</button>
+    </section>
+    <section class="notes_wrapper" data-type="notes-window">
+      <div class="top"></div>
+      <section class="notes" data-type="notes">
+        
+      </section>
+    </section>
+    <section class="add_edit">
+      <form data-type="add-edit">
+        <textarea class="input" name="body"></textarea>
+        <button data-type="save">Save</button>
+      </form>
+    </section>
+  </section>
+</div>
+
+{% include templates.html %}

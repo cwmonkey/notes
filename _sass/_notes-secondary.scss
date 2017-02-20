@@ -1,0 +1,8 @@
+@import "cms-normalize";
+@import "mixins";
+
+.cms {
+	line-height: 1.5;
+
+	@include cms-normalize();
+}

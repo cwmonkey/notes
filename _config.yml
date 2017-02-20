@@ -1,0 +1,27 @@
+# Handling Reading
+exclude: [Gemfile, README.md]
+
+# Conversion
+markdown:    kramdown
+highlighter: rouge
+excerpt_separator: "\n\n\n"
+
+# Outputting
+baseurl: /notes
+timezone: America/California
+
+sass:
+  style: compressed
+
+# Custom
+domain: cwmonkey.github.com
+url: /notes
+title: notes
+description: Take some notes
+copyright: 2017
+name: Notes
+author: cwmonkey
+twitter:
+  username: WrasslorMonkey
+github:
+  username: cwmonkey

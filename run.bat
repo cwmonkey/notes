@@ -1,0 +1,1 @@
+bundle exec jekyll serve --watch --config _config.local.yml,_config.yml

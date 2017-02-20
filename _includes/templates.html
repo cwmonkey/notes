@@ -1,0 +1,25 @@
+{% raw %}
+<script type="text/x-handlebars" data-type="note-tpl">
+  <div class="__notes--note">
+    <span class="__notes--nav">
+      <menu class="__notes--tools">
+        <button data-type="edit" class="__notes--tool __notes--edit">Edit</button>
+        <button data-type="delete" class="__notes--tool __notes--delete">Delete</button>
+      </menu>
+    </span>
+    <span class="__notes--main">
+      <span class="__notes--body cms">{{{md_body}}}</span>
+    </span>
+  </div>
+</script>
+
+<script type="text/x-handlebars" data-type="section-button-tpl">
+  <button class="section" data-type="section" data-value="{{id}}">{{name}}</button>
+</script>
+
+<script type="text/x-handlebars" data-type="note-tpl">
+  <div class="note">
+    {{html}}
+  </div>
+</script>
+{% endraw %}
