@@ -1,25 +1,123 @@
 {% raw %}
 <script type="text/x-handlebars" data-type="note-tpl">
-  <div class="__notes--note">
+  <div class="note" data-thing="note" data-type="tpl" tabindex="-1">
     <span class="__notes--nav">
-      <menu class="__notes--tools">
-        <button data-type="edit" class="__notes--tool __notes--edit">Edit</button>
-        <button data-type="delete" class="__notes--tool __notes--delete">Delete</button>
+      <menu class="tools">
+        <button data-type="edit" class="tool edit">Edit</button>
+        <button data-type="delete" class="tool delete">Delete</button>
+        <button data-type="copy" class="tool copy">Copy</button>
       </menu>
     </span>
-    <span class="__notes--main">
-      <span class="__notes--body cms">{{{md_body}}}</span>
-    </span>
+    <div class="body cms">
+      {{#if image}}
+        <div class="note_image_wrapper" data-type="image">
+          <p class="note_image">
+            <a href="{{image | none}}" target="_blank">
+              <img src="{{image | none}}" width="{{width}}" height="{{height}}">
+            </a>
+            {{#if deletehash}}
+              <button class="delete" data-type="delete-image">Delete Image</button>
+            {{/if}}
+          </p>
+        </div>
+      {{/if}}
+      {{body | md}}
+    </div>
   </div>
 </script>
 
-<script type="text/x-handlebars" data-type="section-button-tpl">
-  <button class="section" data-type="section" data-value="{{id}}">{{name}}</button>
-</script>
-
-<script type="text/x-handlebars" data-type="note-tpl">
-  <div class="note">
-    {{html}}
+<script type="text/x-handlebars" data-type="category-nav-tpl">
+  <div class="category_nav_wrapper" data-id="{{#if id}}{{id}}{{else}}_{{/if}}" data-type="tpl">
+    <button class="category_nav" data-type="category-nav" data-value="{{id}}" title="{{title}}">
+      <span class="text" data-type="title">{{title}}</span>
+    </button>
+    {{#if id}}
+      <button class="edit" data-type="edit">
+        <span class="text">Edit</span>
+      </button>
+    {{/if}}
   </div>
 </script>
+
+<script type="text/x-handlebars" data-type="category-tpl">
+  <div class="category" data-id="{{#if id}}{{id}}{{else}}_{{/if}}" data-type="tpl">
+  </div>
+</script>
+
+<script type="text/x-handlebars" data-type="category-option-tpl">
+  <option value="{{id}}" data-type="tpl">{{title}}</option>
+</script>
+
+<script type="text/x-handlebars" data-type="preference-toggle-tpl">
+  <label class="preference" for="__preference_{{id}}" data-type="tpl">
+    <input type="checkbox" name="{{id}}" id="__preference_{{id}}" value="1">
+  </label>
+</script>
+
+<script type="text/x-handlebars" data-type="preference-tpl">
+  <p class="preference" data-type="tpl">
+    {{id}}: {{value}}
+  </p>
+</script>
+
+<script type="text/x-handlebars" data-type="add-edit-note-form-tpl">
+  <div class="add_edit_note_form" data-type="add-edit-note-form">
+    <div class="preview_image_wrapper" data-type="preview-image-wrapper">
+      <div class="preview_canvas_wrapper">
+        <canvas width="0" height="0" data-type="preview-canvas" class="preview_canvas"></canvas>
+      </div>
+      <div class="preview_image" data-type="preview-image"></div>
+      {{#if edit}}
+      {{else}}
+        <p class="image_warning">Image will be uploaded anonymously to <a href="https://imgur.com" target="_blank">imgur</a> (it is not private)</p>
+      {{/if}}
+      <button class="remove_image" data-type="remove-image">Remove</button>
+    </div>
+    <form data-type="form" class="form">
+      {{#if edit}}
+        <input type="hidden" name="id">
+      {{else}}
+        <input type="hidden" name="category">
+      {{/if}}
+      <input id="{{#if edit}}edit{{else}}imagefile{{/if}}" data-type="upload-image-file" type="file" class="image_file">
+
+      <div class="input_wrapper">
+        <label for="{{#if edit}}edit{{else}}imagefile{{/if}}" data-type="add_image" class="add_image"></label>
+        <div class="note_body_wrapper">
+          <textarea name="body" class="note_body" data-type="note-body" placeholder="Add a note"></textarea>
+        </div>
+        <div class="submit_note_wrapper">
+          <button class="submit_note">
+            {{#if edit}}
+              Save
+            {{else}}
+              Add
+            {{/if}}
+          </button>
+        </div>
+      </div>
+      {{#if edit}}
+        <select class="category_change" name="category" data-type="category-options"></select>
+        <button class="cancel" data-type="cancel">Cancel</button>
+      {{/if}}
+    </form>
+  </div>
+</script>
+
+<script type="text/x-handlebars" data-type="add-edit-category-form-tpl">
+  <div data-type="add-edit-category-form" class="category_form_wrapper">
+    <form class="category_form">
+      {{#if edit}}
+        <input type="hidden" name="id">
+      {{/if}}
+      <div class="category_text_wrapper">
+        <input data-type="category-title" class="category_text" type="text" name="title" placeholder="Category title">
+      </div>
+      <input type="submit" class="submit" value="{{#if edit}}Save{{else}}Add{{/if}} Category">
+      <button class="cancel" data-type="cancel">Cancel</button>
+      <button class="delete" data-type="delete">Delete</button>
+    </form>
+  </div>
+</script>
+
 {% endraw %}

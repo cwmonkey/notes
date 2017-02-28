@@ -1,0 +1,150 @@
+$delete_color: #de0c27;
+$add_color: #69dc7e;
+
+.secondary {
+  $secondary_background: #252627;
+
+  background: $secondary_background;
+
+  .headline {
+    color: lighten($secondary_background, 60%);
+
+    .add {
+      color: lighten($secondary_background, 70%);
+
+      &:focus,
+      &:hover {
+        color: $add_color;
+      }
+    }
+  }
+
+  .delete,
+  .cancel {
+    border-color: lighten($secondary_background, 60%);
+    color: lighten($secondary_background, 60%);
+
+    &:focus,
+    &:hover {
+      color: $secondary_background;
+      border-color: lighten($secondary_background, 70%);
+      background: lighten($secondary_background, 70%);
+    }
+  }
+
+  .category_nav_wrapper {
+    .category_nav {
+      color: lighten($secondary_background, 50%);
+    }
+
+    &:hover {
+      background: lighten($secondary_background, 20%);
+
+      .category_nav {
+        color: lighten($secondary_background, 70%);
+      }
+    }
+
+    .edit {
+      .text {
+        color: lighten($secondary_background, 80%);
+      }
+    }
+
+    &.active {
+      &:hover .category_nav,
+      .category_nav {
+        background: #4B88A2;
+        color: lighten($secondary_background, 70%);
+      }
+    }
+  }
+}
+
+.primary {
+  $primary_color: #252627;
+  $background_color: #FBF9FB;
+
+  background: $background_color;
+  color: $primary_color;
+
+  button {
+    border-color: $primary_color;
+  }
+
+  .note {
+    border-color: lighten($primary_color, 70%);
+
+    &:hover {
+      background: lighten($primary_color, 80%);
+    }
+  }
+
+  .tools {
+    border-color: lighten($primary_color, 70%);
+    background: $background_color;
+  }
+
+  .tool {
+    color: $primary_color;
+    background: $background_color;
+
+    &.delete:hover {
+      color: $delete_color;
+    }
+  }
+
+  .note {
+    .add_edit_note_form {
+      border-color: lighten($primary_color, 40%);
+      background: #fafad0;
+    }
+
+    .edit_body {
+      border-color: lighten($primary_color, 40%);
+    }
+
+    .remove_image,
+    .add_image,
+    .submit_note {
+      background: $background_color;
+    }
+
+    .cancel {
+      background: $background_color;
+    }
+  }
+
+  .note_image_wrapper {
+    .delete {
+      background: $background_color;
+      color: $primary_color;
+
+      &:hover {
+        color: $delete_color;
+      }
+    }
+  }
+
+  .note_image {
+    img {
+      border-color: lighten($primary_color, 50%);
+    }
+  }
+
+  .add_note {
+    border-color: lighten($primary_color, 70%);
+  }
+
+  .add_image {
+    &:before {
+      border-color: $primary_color;
+      background: $background_color;
+      color: $primary_color;
+    }
+  }
+
+  .note_body {
+    border-color: lighten($primary_color, 30%);
+  }
+}
