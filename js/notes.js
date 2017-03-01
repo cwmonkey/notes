@@ -6,7 +6,7 @@ Category sorting
 Color schemes
 Delete all notes in category
 Sort incoming notes
-Auto update on window focus
+scroll to bottom of notes only if already at/near the bottom
 
 */
 
@@ -100,8 +100,12 @@ var $gdauthorize = $('[data-type="gdauthorize"]');
 var $gdsync = $('[data-type="gdsync"]');
 var $gdstatus = $('[data-type="gdstatus"]');
 
-var $notes_wrapper = $('[data-type="notes-wrapper"]');
+//var $notes_wrapper = $('[data-type="notes-wrapper"]');
 
+var gdsaving = false;
+var gdloading = false;
+var gdsave_later = false;
+var gdload_later = false;
 var filename = app_data_name;
 var default_content = '{"preferences":{},"categories":{},"notes":{}}';
 
@@ -114,10 +118,34 @@ var gdstatus = function(text) {
 };
 
 var gdsave = function(text) {
+  if ( gdloading ) {
+    console.log('cannot save, loading');
+    gdsave_later = true;
+    return;
+  }
+
+  if ( gdsaving ) {
+    console.log('cannot save, saving');
+    gdsave_later = true;
+    return;
+  }
+
+  gdsaving = true;
+
   gdstatus('Saving remote data...');
   gd.updateFile(filename, text, function() {
+    gdsaving = false;
     gdstatus('Remote data saved!');
+    if ( gdsave_later ) {
+      gdsave_later = false;
+      force_next_save = true;
+      saver();
+    } else if ( gdload_later ) {
+      gdload_later = false;
+      gdload();
+    }
   }, function(error, resp) {
+    gdsaving = false;
     console.log(error, resp);
     gdstatus('Could not save remote data. Trying to re-authorize...');
     gd.checkAuth(function() {
@@ -132,12 +160,32 @@ var gdsave = function(text) {
 };
 
 var gdload = function() {
+  if ( gdloading ) {
+    console.log('cannot load, loading');
+    return;
+  }
+
+  if ( gdsaving ) {
+    console.log('cannot save, loading');
+    gdload_later = true;
+    return;
+  }
+
+  gdloading = true;
+
   gdstatus('Loading remote data...');
   gd.loadFile(filename, default_content, function(text) {
+    gdloading = false;
     console.log('File content:', text);
     gdstatus('Remote data loaded!');
     loader(text);
+    if ( gdsave_later ) {
+      gdsave_later = false;
+      force_next_save = true;
+      saver();
+    }
   }, function(error, resp) {
+    gdloading = false;
     console.log(error, resp);
     gdstatus('Could not load remote data. Trying to re-authorize...');
     gd.checkAuth(function() {
@@ -152,16 +200,33 @@ var gdload = function() {
 };
 
 gdstatus('Loading Google Drive...');
-gd.load(function() {
+var gdonload = function() {
   $gdauthorize.hide();
   $gdsync.show();
 
   gdload();
-}, function(error, resp) {
+};
+
+var gdonerror = function(error, resp) {
   $gdauthorize.show();
   $gdsync.hide();
 
+  gdstatus('Please login to Google Drive');
   console.log(error, resp);
+};
+
+gd.load(gdonload, gdonerror);
+
+$(window).bind('focus', function() {
+  gdload();
+});
+
+$gdauthorize.bind('click', function() {
+  gd.checkAuthManual(gdonload, gdonerror);
+});
+
+$gdsync.bind('click', function() {
+  gdload();
 });
 
   /////////////////////////////
@@ -317,6 +382,8 @@ var loader = function(text, skip_save) {
   if ( force_next_save ) {
     saver();
   }
+
+  scroll_notes_window();
 };
 
   /////////////////////////////

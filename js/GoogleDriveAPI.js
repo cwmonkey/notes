@@ -85,7 +85,17 @@ GoogleDriveAPI.prototype.checkAuthManual = function(onload, onerror) {
 };
 
 GoogleDriveAPI.prototype._readFile = function(file, onload, onerror) {
-	var accessToken = gapi.auth.getToken().access_token;
+	var self = this;
+	var token = gapi.auth.getToken();
+
+	if ( !token ) {
+		this.checkAuth(function() {
+			self._readFile(file, onload, onerror);
+		}, onerror);
+		return;
+	}
+
+	var accessToken = token.access_token;
 	var xhr = new XMLHttpRequest();
 	xhr.open('GET', file.downloadUrl);
 	xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
