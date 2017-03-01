@@ -114,7 +114,9 @@ var gd = new GoogleDriveAPI({
 });
 
 var gdstatus = function(text) {
-  $gdstatus.html(text + ' - ' + moment().format('h:mm:ssa'));
+  var log = text + ' - ' + moment().format('h:mm:ssa');
+  console.log(log);
+  $gdstatus.html(log);
 };
 
 var gdsave = function(text) {
@@ -705,16 +707,36 @@ var add_edit_note = function(note, do_scroll) {
   this.reset();
 };
 
+var command_reg = /^\//;
+
 $document
   .delegate('[data-type="add-note-wrapper"] form', 'submit', function(ev) {
     ev.preventDefault();
     edit = false;
     var $this = $(this);
 
-    var data = $this.serializeObject();
-    var note = notes.add(data);
+    var $body = $this.find('[name="body"]');
+    var body = $body.val();
 
-    add_edit_note.call(this, note, true);
+    if ( body.match(command_reg) ) {
+      if ( body === '/delete all notes' ) {
+        localStorage.removeItem(app_data_name);
+        gdstatus('Deleting all remote data...');
+        gd.deleteFile(filename, function() {
+          gdstatus('Remote data deleted.');
+        }, function(error, resp) {
+          gdstatus('Failed to delete remote data.');
+          console.log(error, resp);
+        });
+      }
+
+      $body.val('');
+    } else {
+      var data = $this.serializeObject();
+      var note = notes.add(data);
+
+      add_edit_note.call(this, note, true);
+    }
   })
   .delegate('[data-type="upload-image-file"]', 'change', function() {
     var $this = $(this);

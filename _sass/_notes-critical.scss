@@ -90,6 +90,10 @@ input {
         position: absolute;
         text-indent: 0;
       }
+
+      @media (max-width: 768px) {
+        opacity: 1;
+      }
     }
 
     &:hover {

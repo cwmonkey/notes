@@ -24,6 +24,7 @@ GoogleDriveAPI.prototype.errors = {
 	new_file: {type: 'new_file', message: 'Could not create new file'},
 	update_file: {type: 'update_file', message: 'Could not update file'},
 	read_file: {type: 'read_file', message: 'Could not read file contents'},
+	delete_file: {type: 'delete_file', message: 'Could not delete file'},
 	list_files: {type: 'list_files', message: 'Could not list files'}
 };
 
@@ -231,6 +232,22 @@ GoogleDriveAPI.prototype.updateFile = function(filename, content, onload, onerro
 	request.execute(function(resp) {
 		if ( !resp || resp.error ) {
 			onerror(self.errors.update_file, resp);
+		} else {
+			onload();
+		}
+	});
+};
+
+GoogleDriveAPI.prototype.deleteFile = function(filename, onload, onerror) {
+	var self = this;
+	var file = this.files[filename];
+	var request = gapi.client.drive.files.delete({
+		'fileId': file.id
+	});
+
+	request.execute(function(resp) {
+		if (resp.error) {
+			onerror(self.errors.delete_file, resp);
 		} else {
 			onload();
 		}
