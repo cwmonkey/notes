@@ -1,5 +1,5 @@
 # Handling Reading
-exclude: [Gemfile, README.md]
+exclude: [Gemfile, README.md, run.bat]
 
 # Conversion
 markdown:    kramdown
@@ -25,3 +25,19 @@ twitter:
   username: WrasslorMonkey
 github:
   username: cwmonkey
+javascripts:
+  - src: js/vendor/jquery/3.1.1/jquery.min.js
+  - src: js/vendor/showdown/1.6.4/showdown.min.js
+  - src: js/Imgur.js
+  - src: js/vendor/moment.js/2.17.1/moment.min.js
+  - src: js/vendor/clipboard.js/1.6.0/clipboard.min.js
+  - src: js/ImageClipboard.js
+  - src: js/Tpl.js
+  - src: js/jquery.serializeObject.js
+  - src: js/GoogleDriveAPI.js
+  - src: js/Thing.js
+  - src: js/Thing.Note.js
+  - src: js/Thing.Preference.js
+  - src: js/Thing.Category.js
+  - src: js/ThingCollection.js
+  - src: js/notes.js

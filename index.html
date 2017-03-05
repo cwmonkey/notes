@@ -78,6 +78,11 @@ layout: null
 
 {% include templates.html %}
 
+<script>
+  if ( typeof Promise === "undefined" || Promise.toString().indexOf("[native code]") === -1 ) {
+    document.write('<script src="//cdnjs.cloudflare.com/ajax/libs/es6-promise/4.0.5/es6-promise.auto.min.js" defer></' + 'script>');
+  }
+</script>
 {% if site.local %}
   <script>
     // window.debug = true; // This enables debugging for everything
@@ -86,32 +91,16 @@ layout: null
     window.notesDebug = true;
     window.ThingDebug = true;
   </script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js" defer></script>
+  {% for js in site.javascripts %}
+    <script src="{{site.baseurl}}/{{ js.src }}" defer></script>
+  {% endfor %}
 {% else %}
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js" defer></script>
+  <script>
+    {% for js in site.javascripts %}
+      {% include_relative {{ js.src }} %}
+    {% endfor %}
+  </script>
 {% endif %}
-
-<script src="//cdnjs.cloudflare.com/ajax/libs/showdown/1.6.4/showdown.min.js" defer></script>
-<script>
-  if ( typeof Promise === "undefined" || Promise.toString().indexOf("[native code]") === -1 ) {
-    document.write('<script src="//cdnjs.cloudflare.com/ajax/libs/es6-promise/4.0.5/es6-promise.auto.min.js" defer></' + 'script>');
-  }
-</script>
-
-<script src="{{site.baseurl}}/js/Imgur.js" defer></script>
-
-<script src="//cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js" defer></script>
-<script src="//cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.6.0/clipboard.min.js" defer></script>
-<script src="{{site.baseurl}}/js/ImageClipboard.js" defer></script>
-<script src="{{site.baseurl}}/js/Tpl.js" defer></script>
-<script src="{{site.baseurl}}/js/jquery.serializeObject.js" defer></script>
-<script src="{{site.baseurl}}/js/GoogleDriveAPI.js" defer></script>
-<script src="{{site.baseurl}}/js/Thing.js" defer></script>
-<script src="{{site.baseurl}}/js/Thing.Note.js" defer></script>
-<script src="{{site.baseurl}}/js/Thing.Preference.js" defer></script>
-<script src="{{site.baseurl}}/js/Thing.Category.js" defer></script>
-<script src="{{site.baseurl}}/js/ThingCollection.js" defer></script>
-<script src="{{site.baseurl}}/js/notes.js" defer></script>
 
 <link rel="stylesheet" href="{{site.baseurl}}/assets/notes-secondary.min.css">
 
