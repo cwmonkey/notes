@@ -1,11 +1,11 @@
 ;(function(Thing, ThingDebug, ThingCategoryDebug, debug, undefined) {
 
-debug = debug || ThingDebug || ThingCategoryDebug;
+var me = Thing;
 
 // "Extend" Category to Thing
 var Category = function(params) {
-  debug && console.log('Category', params);
-  Thing.call(this, params);
+  me.debug && this.log(' new', params);
+  Thing.apply(this, arguments);
 };
 
 // Set Category's prototype to Thing's prototype
@@ -16,9 +16,11 @@ Category.prototype.constructor = Category;
 
 // Category prototypes
 
+Category.prototype.name = 'Thing.Category';
+
 // Set up attrs
 Category.prototype.setup = function(params) {
-  debug && console.log('Category.setup');
+  //me.debug && this.log('.setup');
 
   this.type = 'category';
 
@@ -29,7 +31,7 @@ Category.prototype.setup = function(params) {
 
 // Nothing yet
 Category.prototype.init = function(params) {
-  debug && console.log('Category.init');
+  //me.debug && this.log('.init');
 };
 
 window.Thing.Category = Category;

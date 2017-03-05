@@ -2,10 +2,12 @@
 
 debug = debug || ThingDebug || ThingNoteDebug;
 
+var me = Thing;
+
 // "Extend" Note to Thing
 var Note = function(params) {
-  debug && console.log('Note', params);
-  Thing.call(this, params);
+  me.debug && this.log(' new', params);
+  Thing.apply(this, arguments);
 };
 
 // Set Note's prototype to Thing's prototype
@@ -16,9 +18,11 @@ Note.prototype.constructor = Note;
 
 // Note prototypes
 
+Note.prototype.name = 'Thing.Note';
+
 // Set up attrs
 Note.prototype.setup = function(params) {
-  debug && console.log('Note.setup');
+  //me.debug && this.log('.setup');
 
   this.type = 'note';
 
@@ -32,7 +36,7 @@ Note.prototype.setup = function(params) {
 
 // Nothing yet
 Note.prototype.init = function(params) {
-  debug && console.log('Note.init');
+  //me.debug && this.log('.init');
 };
 
 window.Thing.Note = Note;

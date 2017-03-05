@@ -11,11 +11,12 @@ smarter deleting
 Tests - at least in-browser ones
 Red/green indicators on status messages
 Check for rate limiting
-Remember what was in textarea if refreshed
 Show times/edits
 Edit revisions
 Don't show menu when scrolling on ios
 Task list functionality
+Remember what was being typed per category and have an indicator for text typed when changing categories
+Remember note's edit states
 
 */
 
@@ -23,9 +24,39 @@ Task list functionality
   $, Tpl, GoogleDriveAPI, showdown, moment,
   Thing, ThingCollection, Note, Category, Preference,
   ImageClipboard, Clipboard, Imgur,
-  testDebug, debug, undefined) {
+  notesDebug, debug, undefined) {
 
-debug = debug || testDebug;
+// TODO: Move stuff in here
+var App = function() {
+
+};
+
+// Debugging
+var debug_icon = String.fromCodePoint(128196);
+var debug_name = 'notes.js';
+var debug_styles = {
+  nameStart: 'background:#252627;border-top-left-radius:3px;border-bottom-left-radius:3px;',
+  nameEnd: 'background:#252627;border-top-right-radius:3px;border-bottom-right-radius:3px;color:#fff',
+  reset: 'background:transparent'
+};
+var debug_prepend = [debug_icon + ' %c %c' + debug_name + ' %c', debug_styles.nameStart, debug_styles.nameEnd, debug_styles.reset];
+
+App.debug = debug || notesDebug;
+App.log = function() {
+  var args = Array.prototype.slice.call(arguments);
+  args.unshift.apply(args, debug_prepend);
+  console.log.apply(console, args);
+};
+
+App.trace = function() {
+  var args = Array.prototype.slice.call(arguments);
+  args.unshift.apply(args, debug_prepend);
+  console.trace.apply(console, args);
+};
+
+var me = App;
+
+me.log('loading...');
 
   /////////////////////////////
  // Textarea resizer
@@ -94,6 +125,7 @@ var md = function(text) {
 
 var app_name = '__notes';
 var app_data_name = app_name + '--data';
+var note_body_data_name = app_name + '--note-body';
 var collections = [];
 var $document = $(document);
 
@@ -108,7 +140,7 @@ var $gdauthorize = $('[data-type="gdauthorize"]');
 //var $gddisable = $('[data-type="gddisable"]');
 var $gdsync = $('[data-type="gdsync"]');
 var $gdstatus = $('[data-type="gdstatus"]');
-var filename_reg = /^__notes--data--([a-z]+)--([a-zA-Z0-9]+)/;
+var filename_reg = /^__notes--data--([a-z]+)--([a-zA-Z0-9_]+)/;
 var gdloading = false;
 var filename = app_data_name;
 var gdfiles = {};
@@ -117,14 +149,18 @@ var gd = new GoogleDriveAPI({
   clientId: '935193854133-pt3okf2v2qo7mbds6as2l6sll7in68kb.apps.googleusercontent.com'
 });
 
+if ( me.debug ) {
+  window.gd = gd;
+}
+
 var gdstatus = function(text) {
   var log = text + ' - ' + moment().format('h:mm:ssa');
-  console.log(log);
+  me.debug && me.log('gdstatus', log);
   $gdstatus.html(log);
 };
 
 var gdauthfail = function(error, resp) {
-  console.log(error, resp);
+  me.debug && me.log('gdauthfail', error, resp);
   gdstatus('Could not authorize. Please log in again.');
   $gdauthorize.show();
   $gdsync.hide();
@@ -138,7 +174,6 @@ var gdsavenew = function(thing) {
   gdstatus('Adding to Google Drive...');
   gd.addFile(filename + '--' + thing.type + '--' + thing.id, JSON.stringify(thing.export(true)), function(resp) {
     gdstatus('Added to Google Drive.');
-    console.log(resp);
 
     gdfiles[resp.id] = {
       id: resp.id,
@@ -159,7 +194,7 @@ var gdsavenew = function(thing) {
       thing.$els.removeClass('saving');
     }
   }, function(error, resp) {
-    console.log(error, resp);
+    me.debug && me.log('gdsavenew', error, resp);
     if ( resp.error.code == 403 ) {
       gdstatus('Google Drive rate limit exceeded.');
       gdratelimited = true;
@@ -184,7 +219,6 @@ var gdsave = function(thing) {
   var file = gdfiles[thing.gdfileid];
   gd.updateFile(file, JSON.stringify(thing.export(true)), function(resp) {
     gdstatus('Saved update to Google Drive.');
-    console.log(resp);
 
     gdfiles[resp.id] = {
       id: resp.id,
@@ -205,7 +239,7 @@ var gdsave = function(thing) {
       thing.$els.removeClass('saving');
     }
   }, function(error, resp) {
-    console.log(error, resp);
+    me.debug && me.log('gdsave', error, resp);
     if ( resp.error.code == 403 ) {
       gdstatus('Google Drive rate limit exceeded.');
       gdratelimited = true;
@@ -236,10 +270,8 @@ var gddelete = function(thing) {
     gdstatus('Deleted from Google Drive.');
 
     collection_obj[plurals[thing.type]].del(thing.id);
-
-    console.log(resp);
   }, function(error, resp) {
-    console.log(error, resp);
+    me.debug && me.log('gddelete', error, resp);
     if ( resp.error.code == 403 ) {
       gdstatus('Google Drive rate limit exceeded.');
       gdratelimited = true;
@@ -259,7 +291,7 @@ var gdratelimited = false;
 var self = this;
 var gdrundownloadqueue = function() {
   if ( gdratelimited ) {
-    console.log('Rate limited, bailing');
+    me.debug && me.log('gdrundownloadqueue', 'Rate limited, bailing');
     return;
   }
 
@@ -285,10 +317,9 @@ var gdqueuedownload = function(file, onload, onerror) {
 
 var plurals = {'note': 'notes', 'category': 'categories', 'preference': 'preferences'};
 var singles = {'notes': 'note', 'categories': 'category', 'preferences': 'preference'};
-var gdaddthing = function(id, type, file) {
+var gdaddthing = function(id, type, file, skip_save) {
   gdstatus('Retrieving from Google Drive...');
   gdqueuedownload(file, function(content) {
-    console.log(content);
     gdstatus('Retrieved from Google Drive.');
     var data = content;
     if ( typeof content === 'string' ) {
@@ -298,9 +329,9 @@ var gdaddthing = function(id, type, file) {
     data.gdupdated = file.modifiedTime;
     data.id = id;
 
-    collection_obj[plurals[type]].add(data);
+    collection_obj[plurals[type]].add(data, skip_save);
   }, function(error, resp) {
-    console.log(error, resp);
+    me.debug && me.log('gdaddthing', error, resp);
     if ( resp.error.code == 403 ) {
       gdstatus('Google Drive rate limit exceeded.');
       gdratelimited = true;
@@ -310,14 +341,13 @@ var gdaddthing = function(id, type, file) {
     gdstatus('Could retrieve from Google Drive. Trying to re-authorize...');
 
     gd.checkAuth(function() {
-      gdaddthing(id, type, file);
+      gdaddthing(id, type, file, skip_save);
     }, gdauthfail);
   });
 };
 
 var gdonloadfiles = function(files, last) {
   gdloading = false;
-  console.log('Files loaded:', files);
   gdstatus('Remote data loaded.');
 
   var new_file;
@@ -327,21 +357,19 @@ var gdonloadfiles = function(files, last) {
   for ( var key in files ) {
     if ( files.hasOwnProperty(key) ) {
       new_file = files[key];
+
       new_file.found = true;
+      me.debug && me.log('File:', new_file);
       if ( (matches = new_file.name.match(filename_reg)) ) {
         file = gdfiles[key];
-
         if ( !file ) {
-          console.log('New file:', matches[1], matches[2], new_file);
           gdaddthing(matches[2], matches[1], new_file);
           // download file and save
           gdfiles[key] = new_file;
         } else if ( Date.parse(file.modifiedTime) < Date.parse(new_file.modifiedTime) ) {
-          console.log('Updated file:', matches[1], new_file);
           // download file and update
           gdfiles[key] = new_file;
         } else {
-          console.log('File not changed:', matches[1], new_file);
           gdfiles[key] = new_file;
         }
       }
@@ -355,7 +383,7 @@ var gdonloadfiles = function(files, last) {
 
 var gdonerrorfiles = function(error, resp) {
   gdloading = false;
-  console.log(error, resp);
+  me.debug && me.log('gdonerrorfiles', error, resp);
   if ( resp.error.code == 403 ) {
     gdstatus('Google Drive rate limit exceeded.');
     gdratelimited = true;
@@ -371,7 +399,7 @@ var gdonerrorfiles = function(error, resp) {
 
 var gdload = function() {
   if ( gdloading ) {
-    console.log('cannot load, already loading');
+    me.debug && me.log('gdload', 'cannot load, already loading');
     return;
   }
 
@@ -393,8 +421,8 @@ var gdonerror = function(error, resp) {
   $gdauthorize.show();
   $gdsync.hide();
 
+  me.debug && me.log('gdonerror', error, resp);
   gdstatus('Please login to Google Drive');
-  console.log(error, resp);
 };
 
 gd.load(gdonload, gdonerror);
@@ -533,11 +561,13 @@ var saver = function() {
     save_data[collection.name] = collection.export();
   }
 
+  me.debug && me.log('saver', save_data);
   store.set(app_data_name, save_data);
 };
 
 var loader = function(text, skip_save) {
   var data = JSON.parse(text);
+  me.debug && me.log('loader', data);
 
   for ( var i = 0, l = collections.length; i < l; i++ ) {
     var collection = collections[i];
@@ -610,8 +640,6 @@ var $categories = $();
 var $category_navs = $();
 
 var category_load = function(thing, skip_save) {
-  debug && console.log('==Category Added!', thing);
-
   var $thing = $(category_nav_tpl(thing));
   $thing.data('__thing', thing);
   $category_navs_section.append($thing);
@@ -637,9 +665,7 @@ var category_load = function(thing, skip_save) {
   return thing;
 };
 
-var categories = category_objs['categories'] = add_colection('categories', Category, function(thing) {
-  debug && console.log('==Category Edited!', thing);
-
+var categories = category_objs.categories = add_colection('categories', Category, function(thing) {
   if ( active_category.id === thing.id ) {
     $category_name.html(thing.title);
   }
@@ -654,17 +680,13 @@ var categories = category_objs['categories'] = add_colection('categories', Categ
 
   saver();
 }, category_load, function(thing) {
-  debug && console.log('==Category Deleted!', thing);
-
   thing.$els.remove();
   saver();
 });
 
 // Notes
 
-var notes = category_objs['notes'] = add_colection('notes', Note, function(thing, changes) {
-  debug && console.log('==Note Edited!', thing);
-
+var notes = category_objs.notes = add_colection('notes', Note, function(thing, changes) {
   if ( changes.body ) {
     var $thing = $(note_tpl(thing));
 
@@ -685,8 +707,6 @@ var notes = category_objs['notes'] = add_colection('notes', Note, function(thing
 
   saver();
 }, function(thing) {
-  debug && console.log('==Note Added!', thing);
-
   var $thing = $(note_tpl(thing));
 
   if ( thing.gdsaving ) {
@@ -698,25 +718,18 @@ var notes = category_objs['notes'] = add_colection('notes', Note, function(thing
   var id = thing.category || "_";
   $categories.filter('[data-id="' + id + '"]').append($thing);
 }, function(thing) {
-  debug && console.log('==Note Deleted!', thing);
-
   thing.$el.remove();
   saver();
 });
 
 // Preferences
 
-var preferences = category_objs['preferences'] = add_colection('preferences', Preference, function(thing) {
-  debug && console.log('==Preference Edited!', thing);
-
+var preferences = category_objs.preferences = add_colection('preferences', Preference,
+function(thing) {
   saver();
 }, function(thing) {
-  debug && console.log('==Preference Added!', thing);
-
   saver();
 }, function(thing) {
-  debug && console.log('==Preference Deleted!', thing);
-
   saver();
 });
 
@@ -955,7 +968,20 @@ var add_edit_note = function(note, do_scroll) {
 
 var command_reg = /^\//;
 
+var stored_note_body = store.get(note_body_data_name);
+if ( stored_note_body ) {
+  $('[data-type="add-note-wrapper"] [data-type="note-body"]').val(stored_note_body);
+  store.remove(note_body_data_name);
+}
+
 $document
+  // Save textarea data
+  .delegate('[data-type="add-note-wrapper"] [data-type="note-body"]', 'keyup input', function() {
+    var $this = $(this);
+    var val = $this.val();
+
+    store.set(note_body_data_name, val);
+  })
   // Add Note
   .delegate('[data-type="add-note-wrapper"] form', 'submit', function(ev) {
     ev.preventDefault();
@@ -1247,4 +1273,4 @@ $document
   window.jQuery, window.Tpl, window.GoogleDriveAPI, window.showdown, window.moment,
   window.Thing, window.ThingCollection, window.Thing.Note, window.Thing.Category, window.Thing.Preference,
   window.ImageClipboard, window.Clipboard, window.Imgur,
-  window.testDebug, window.debug);
+  window.notesDebug, window.debug);

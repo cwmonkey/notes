@@ -1,11 +1,11 @@
 ;(function(Thing, ThingDebug, ThingPreferenceDebug, debug, undefined) {
 
-debug = debug || ThingDebug || ThingPreferenceDebug;
+var me = Thing;
 
 // "Extend" Preference to Preference
 var Preference = function(params) {
-  debug && console.log('Preference', params);
-  Thing.call(this, params);
+  me.debug && this.log(' new', params);
+  Thing.apply(this, arguments);
 };
 
 // Set Preference's prototype to Preference's prototype
@@ -16,9 +16,11 @@ Preference.prototype.constructor = Preference;
 
 // Preference prototypes
 
+Preference.prototype.name = 'Thing.Preference';
+
 // Set up attrs
 Preference.prototype.setup = function(params) {
-  debug && console.log('Preference.setup');
+  //me.debug && this.log('.setup');
 
   this.type = 'preference';
 
@@ -29,7 +31,7 @@ Preference.prototype.setup = function(params) {
 
 // Nothing yet
 Preference.prototype.init = function(params) {
-  debug && console.log('Preference.init');
+  //me.debug && this.log('.init');
 };
 
 window.Thing.Preference = Preference;

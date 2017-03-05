@@ -1,9 +1,7 @@
 ;(function(ThingDebug, debug, undefined) {
 
-debug = ThingDebug || debug;
-
-var Thing = function(params) {
-  debug && console.log('Thing', params);
+var Thing = function(params, skip_save) {
+  me.debug && this.log(' new Thing', params);
   var self = this;
 
   var values = {};
@@ -46,9 +44,44 @@ var Thing = function(params) {
   this.init(params);
 
   if ( !this.deleted && this.onLoad ) {
-    this.onLoad(this);
+    this.onLoad(this, skip_save);
   }
 };
+
+var me = Thing;
+
+// Debugging
+me.debug = ThingDebug || debug;
+
+var debug_styles = {
+  name: 'background:#000;font-weight:bold;color:#f7933c;border-top-left-radius:3px;border-bottom-left-radius:3px;',
+  method: 'background:#000;color:#fff;border-top-right-radius:3px;border-bottom-right-radius:3px;'
+};
+
+Thing.prototype.icon = String.fromCodePoint(128217);
+Thing.prototype.name = 'Thing';
+
+Thing.prototype.logPrepend = function() {
+  return [this.icon + ' %c ' + this.name + '%c', debug_styles.name, debug_styles.method];
+};
+
+Thing.prototype.log = function() {
+  var args = Array.prototype.slice.call(arguments);
+  var arg1 = args.shift();
+  args.unshift.apply(args, this.logPrepend());
+  args[0] = args[0] + arg1 + ' ';
+  console.log.apply(console, args);
+};
+
+Thing.prototype.trace = function() {
+  var args = Array.prototype.slice.call(arguments);
+  var arg1 = args.shift();
+  args.unshift.apply(args, this.logPrepend());
+  args[0] = args[0] + arg1 + ' ';
+  console.trace.apply(console, args);
+};
+
+// Prototypes
 
 // For prototyping, run after base attrs are set
 Thing.prototype.setup = function() { };
@@ -58,7 +91,7 @@ Thing.prototype.init = function() { };
 
 // Update property, set updated flag
 Thing.prototype.update = function(name, value) {
-  debug && console.log('Thing.update', name, value);
+  me.debug && this.log('.update', name, value);
   if ( this[name] !== value ) {
     this[name] = value;
     this.updated = Date.now().toString(36);
@@ -73,8 +106,8 @@ Thing.prototype.update = function(name, value) {
 };
 
 // Save multiple values with the format [{name: name1, value: value1}, ...]
-Thing.prototype.save = function(values) {
-  debug && console.log('Thing.save', values);
+Thing.prototype.save = function(values, skip_save) {
+  me.debug && this.log('.save', values);
   var self = this;
   var modified = false;
   var changes = {};
@@ -93,14 +126,14 @@ Thing.prototype.save = function(values) {
     this.updated = Date.now().toString(36);
   }
 
-  if ( this.onChange ) {
+  if ( this.onChange && !skip_save ) {
     this.onChange(this, changes);
   }
 };
 
 // Empty object
 Thing.prototype.del = function() {
-  debug && console.log('Thing.del', this);
+  me.debug && this.log('.del', this);
 
   this.save([{name: 'deleted', value: 1}]);
 
@@ -109,7 +142,7 @@ Thing.prototype.del = function() {
 
 // Export to simple array
 Thing.prototype.export = function(skip_gd) {
-  debug && console.log('Thing.export', this);
+  me.debug && this.log('.export', this);
   var ret = {};
   var self = this;
 

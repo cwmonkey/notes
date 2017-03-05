@@ -1,9 +1,7 @@
 ;(function(ThingDebug, ThingCollectionDebug, debug, undefined) {
 
-debug = debug || ThingDebug || ThingCollectionDebug;
-
 var ThingCollection = function(name, constructor, save_fn, load_fn, delete_fn) {
-  debug && console.log('ThingCollection', name, constructor, save_fn, load_fn, delete_fn);
+  me.debug && this.log(' new ThingCollection', name);
 
   this.name = name;
   this.constructor = constructor;
@@ -14,6 +12,41 @@ var ThingCollection = function(name, constructor, save_fn, load_fn, delete_fn) {
 
   this.things = {};
 };
+
+var me = ThingCollection;
+
+// Debugging
+me.debug = debug || ThingDebug || ThingCollectionDebug;
+
+var debug_styles = {
+  name: 'background:#000;font-weight:bold;color:#a6d7a5;border-top-left-radius:3px;border-bottom-left-radius:3px;',
+  method: 'background:#000;color:#fff;border-top-right-radius:3px;border-bottom-right-radius:3px;'
+};
+
+me.prototype.icon = String.fromCodePoint(128218);
+me.prototype.__name = 'ThingCollection';
+
+me.prototype.logPrepend = function() {
+  return [this.icon + ' %c ' + this.__name + '%c', debug_styles.name, debug_styles.method];
+};
+
+me.prototype.log = function() {
+  var args = Array.prototype.slice.call(arguments);
+  var arg1 = args.shift();
+  args.unshift.apply(args, this.logPrepend());
+  args[0] = args[0] + arg1 + ' ';
+  console.log.apply(console, args);
+};
+
+me.prototype.trace = function() {
+  var args = Array.prototype.slice.call(arguments);
+  var arg1 = args.shift();
+  args.unshift.apply(args, this.logPrepend());
+  args[0] = args[0] + arg1 + ' ';
+  console.trace.apply(console, args);
+};
+
+// Prototypes
 
 ThingCollection.prototype.get = function(id) {
   return this.things[id];
@@ -47,15 +80,15 @@ ThingCollection.prototype.getByParams = function(params) {
 };
 
 // params = {name1: val1, name2: val2 ... }
-ThingCollection.prototype.add = function(params) {
-  debug && console.log('ThingCollection.add', params);
+ThingCollection.prototype.add = function(params, skip_save) {
+  me.debug && this.log('.add', this.name, params);
   var data = {
     values: params,
     onLoad: this.loadFn,
     onChange: this.saveFn,
   };
 
-  var thing = new this.constructor(data);
+  var thing = new this.constructor(data, skip_save);
   this.things[thing.id] = thing;
 
   this.length++;
@@ -64,7 +97,7 @@ ThingCollection.prototype.add = function(params) {
 };
 
 ThingCollection.prototype.del = function(id) {
-  debug && console.log('ThingCollection.del', id);
+  me.debug && this.log('.del', this.name, id);
 
   var thing = this.things[id];
 
@@ -74,12 +107,12 @@ ThingCollection.prototype.del = function(id) {
 };
 
 ThingCollection.prototype.save = function() {
-  debug && console.log('ThingCollection.save');
+  me.debug && this.log('.save');
   this.saveFn(this.name, this.things);
 };
 
 ThingCollection.prototype.export = function() {
-  debug && console.log('ThingCollection.export', this);
+  me.debug && this.trace('.export', this.name, this);
   var things_export = {};
 
   for ( var key in this.things ) {
@@ -93,7 +126,7 @@ ThingCollection.prototype.export = function() {
 };
 
 ThingCollection.prototype.sync = function(data, skip_save) {
-  debug && console.log('ThingCollection.sync', this, data);
+  me.debug && this.log('.sync', this.name, data, skip_save);
   var new_things;
   var changed = false;
   var is_different = false;
@@ -162,11 +195,11 @@ ThingCollection.prototype.sync = function(data, skip_save) {
   }
 
   if ( changed && !skip_save ) {
-    debug && console.log('ThingCollection.sync, changed', this);
+    me.debug && this.log('.sync', this.name, 'changed', this);
     this.save();
   }
 
-  debug && console.log('ThingCollection.sync, end', this);
+  me.debug && this.log('.sync', this.name, 'end', this);
 };
 
 window.ThingCollection = ThingCollection;

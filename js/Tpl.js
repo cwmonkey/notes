@@ -67,7 +67,8 @@ var Tpl = {
 
     debug && console.log('Tpl.compile-fn:', fn);
 
-    eval('var func = ' + fn);
+    var func;
+    eval('func = ' + fn);
     return func;
   },
   addFilter: function(name, fn) {

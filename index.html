@@ -80,7 +80,11 @@ layout: null
 
 {% if site.local %}
   <script>
-    // window.debug = true;
+    // window.debug = true; // This enables debugging for everything
+    // The rest enable debugging for specific files
+    window.GoogleDriveAPIDebug = true;
+    window.notesDebug = true;
+    window.ThingDebug = true;
   </script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js" defer></script>
 {% else %}
