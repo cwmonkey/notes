@@ -975,6 +975,12 @@ if ( stored_note_body ) {
 }
 
 $document
+  // Submit when ctrl+enter is pressed
+  .delegate('[data-type="note-body"]', 'keydown', function(e) {
+    if ( (e.ctrlKey || e.metaKey) && (e.keyCode === 13 || e.keyCode === 10) ) {
+      $(this).closest('form').trigger('submit');
+    }
+  })
   // Save textarea data
   .delegate('[data-type="add-note-wrapper"] [data-type="note-body"]', 'keyup input', function() {
     var $this = $(this);
