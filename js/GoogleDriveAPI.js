@@ -32,8 +32,6 @@ var debug_styles = {
 
 var debug_prepend = [debug_icon + ' ' + debug_name + '%c', debug_styles.nameStart, debug_styles.nameMiddle, debug_styles.nameEnd, debug_styles.method];
 
-me.debug = debug || notesDebug;
-
 me._print = function(cmd, args) {
   args = Array.prototype.slice.call(args);
   var arg1 = args.shift();
