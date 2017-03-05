@@ -1,5 +1,7 @@
 /*
 TODO:
+Fix deleting categories
+
 When category deleted and notes moved to General, show notes and sort
 Note sorting
 Category sorting
