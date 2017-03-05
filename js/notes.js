@@ -7,6 +7,15 @@ Color schemes
 Delete all notes in category
 Sort incoming notes
 scroll to bottom of notes only if already at/near the bottom
+smarter deleting
+Tests - at least in-browser ones
+Red/green indicators on status messages
+Check for rate limiting
+Remember what was in textarea if refreshed
+Show times/edits
+Edit revisions
+Don't show menu when scrolling on ios
+Task list functionality
 
 */
 
@@ -99,15 +108,10 @@ var $gdauthorize = $('[data-type="gdauthorize"]');
 //var $gddisable = $('[data-type="gddisable"]');
 var $gdsync = $('[data-type="gdsync"]');
 var $gdstatus = $('[data-type="gdstatus"]');
-
-//var $notes_wrapper = $('[data-type="notes-wrapper"]');
-
-var gdsaving = false;
+var filename_reg = /^__notes--data--([a-z]+)--([a-zA-Z0-9]+)/;
 var gdloading = false;
-var gdsave_later = false;
-var gdload_later = false;
 var filename = app_data_name;
-var default_content = '{"preferences":{},"categories":{},"notes":{}}';
+var gdfiles = {};
 
 var gd = new GoogleDriveAPI({
   clientId: '935193854133-pt3okf2v2qo7mbds6as2l6sll7in68kb.apps.googleusercontent.com'
@@ -119,86 +123,262 @@ var gdstatus = function(text) {
   $gdstatus.html(log);
 };
 
-var gdsave = function(text) {
-  if ( gdloading ) {
-    console.log('cannot save, loading');
-    gdsave_later = true;
-    return;
-  }
+var gdauthfail = function(error, resp) {
+  console.log(error, resp);
+  gdstatus('Could not authorize. Please log in again.');
+  $gdauthorize.show();
+  $gdsync.hide();
+};
 
-  if ( gdsaving ) {
-    console.log('cannot save, saving');
-    gdsave_later = true;
-    return;
-  }
+var gdsavenew = function(thing) {
+  thing.save([
+    {name: 'gdsaving', value: 1}
+  ]);
 
-  gdsaving = true;
+  gdstatus('Adding to Google Drive...');
+  gd.addFile(filename + '--' + thing.type + '--' + thing.id, JSON.stringify(thing.export(true)), function(resp) {
+    gdstatus('Added to Google Drive.');
+    console.log(resp);
 
-  gdstatus('Saving remote data...');
-  gd.updateFile(filename, text, function() {
-    gdsaving = false;
-    gdstatus('Remote data saved!');
-    if ( gdsave_later ) {
-      gdsave_later = false;
-      force_next_save = true;
-      saver();
-    } else if ( gdload_later ) {
-      gdload_later = false;
-      gdload();
+    gdfiles[resp.id] = {
+      id: resp.id,
+      modifiedTime: resp.modifiedDate
+    };
+
+    thing.save([
+      {name: 'gdfileid', value: resp.id},
+      {name: 'gdupdated', value: resp.modifiedDate},
+      {name: 'gdsaving', value: undefined}
+    ]);
+
+    if ( thing.$el ) {
+      thing.$el.removeClass('saving');
+    }
+
+    if ( thing.$els ) {
+      thing.$els.removeClass('saving');
     }
   }, function(error, resp) {
-    gdsaving = false;
     console.log(error, resp);
-    gdstatus('Could not save remote data. Trying to re-authorize...');
+    if ( resp.error.code == 403 ) {
+      gdstatus('Google Drive rate limit exceeded.');
+      gdratelimited = true;
+      return;
+    }
+
+    gdstatus('Could not add to Google Drive. Trying to re-authorize...');
+
     gd.checkAuth(function() {
-      gdsave(text);
-    }, function(error, resp) {
-      console.log(error, resp);
-      gdstatus('Could not authorize. Please log in again.');
-      $gdauthorize.show();
-      $gdsync.hide();
-    });
+      gdsavenew(thing);
+    }, gdauthfail);
   });
+};
+
+var gdsave = function(thing) {
+  thing.save([
+    {name: 'gdsaving', value: 1}
+  ]);
+
+  gdstatus('Saving update to Google Drive...');
+  // TODO: detect an edit before a save could happen
+  var file = gdfiles[thing.gdfileid];
+  gd.updateFile(file, JSON.stringify(thing.export(true)), function(resp) {
+    gdstatus('Saved update to Google Drive.');
+    console.log(resp);
+
+    gdfiles[resp.id] = {
+      id: resp.id,
+      modifiedTime: resp.modifiedDate
+    };
+
+    thing.save([
+      {name: 'gdfileid', value: resp.id},
+      {name: 'gdupdated', value: resp.modifiedDate},
+      {name: 'gdsaving', value: undefined}
+    ]);
+
+    if ( thing.$el ) {
+      thing.$el.removeClass('saving');
+    }
+
+    if ( thing.$els ) {
+      thing.$els.removeClass('saving');
+    }
+  }, function(error, resp) {
+    console.log(error, resp);
+    if ( resp.error.code == 403 ) {
+      gdstatus('Google Drive rate limit exceeded.');
+      gdratelimited = true;
+      return;
+    }
+
+    if ( resp.error.code === 404 ) {
+      // TODO
+    } else {
+      gdstatus('Could not save update to Google Drive. Trying to re-authorize...');
+
+      gd.checkAuth(function() {
+        gdsave(thing);
+      }, gdauthfail);
+    }
+  });
+};
+
+var gddelete = function(thing) {
+  gdstatus('Deleting from Google Drive...');
+  thing.save([
+    {name: 'gdsaving', value: 1}
+  ]);
+
+  // TODO: detect a delete before a save could happen
+  var file = gdfiles[thing.gdfileid];
+  gd.deleteFile(file, function(resp) {
+    gdstatus('Deleted from Google Drive.');
+
+    collection_obj[plurals[thing.type]].del(thing.id);
+
+    console.log(resp);
+  }, function(error, resp) {
+    console.log(error, resp);
+    if ( resp.error.code == 403 ) {
+      gdstatus('Google Drive rate limit exceeded.');
+      gdratelimited = true;
+      return;
+    }
+
+    gdstatus('Could not delete from Google Drive. Trying to re-authorize...');
+
+    gd.checkAuth(function() {
+      gdsave(thing);
+    }, gdauthfail);
+  });
+};
+
+var gdqueue = [];
+var gdratelimited = false;
+var self = this;
+var gdrundownloadqueue = function() {
+  if ( gdratelimited ) {
+    console.log('Rate limited, bailing');
+    return;
+  }
+
+  var q = gdqueue[0];
+
+  if ( !q ) {
+    return;
+  }
+
+  gd.getFile(q[0], function() {
+    q[1].apply(self, arguments);
+    gdqueue.shift();
+    gdrundownloadqueue();
+  }, q[2]);
+};
+
+var gdqueuedownload = function(file, onload, onerror) {
+  gdqueue.push([file, onload, onerror]);
+  if ( gdqueue.length === 1 ) {
+    gdrundownloadqueue();
+  }
+};
+
+var plurals = {'note': 'notes', 'category': 'categories', 'preference': 'preferences'};
+var singles = {'notes': 'note', 'categories': 'category', 'preferences': 'preference'};
+var gdaddthing = function(id, type, file) {
+  gdstatus('Retrieving from Google Drive...');
+  gdqueuedownload(file, function(content) {
+    console.log(content);
+    gdstatus('Retrieved from Google Drive.');
+    var data = content;
+    if ( typeof content === 'string' ) {
+      data = JSON.parse(content);
+    }
+    data.gdfileid = file.id;
+    data.gdupdated = file.modifiedTime;
+    data.id = id;
+
+    collection_obj[plurals[type]].add(data);
+  }, function(error, resp) {
+    console.log(error, resp);
+    if ( resp.error.code == 403 ) {
+      gdstatus('Google Drive rate limit exceeded.');
+      gdratelimited = true;
+      return;
+    }
+
+    gdstatus('Could retrieve from Google Drive. Trying to re-authorize...');
+
+    gd.checkAuth(function() {
+      gdaddthing(id, type, file);
+    }, gdauthfail);
+  });
+};
+
+var gdonloadfiles = function(files, last) {
+  gdloading = false;
+  console.log('Files loaded:', files);
+  gdstatus('Remote data loaded.');
+
+  var new_file;
+  var file;
+  var matches;
+
+  for ( var key in files ) {
+    if ( files.hasOwnProperty(key) ) {
+      new_file = files[key];
+      new_file.found = true;
+      if ( (matches = new_file.name.match(filename_reg)) ) {
+        file = gdfiles[key];
+
+        if ( !file ) {
+          console.log('New file:', matches[1], matches[2], new_file);
+          gdaddthing(matches[2], matches[1], new_file);
+          // download file and save
+          gdfiles[key] = new_file;
+        } else if ( Date.parse(file.modifiedTime) < Date.parse(new_file.modifiedTime) ) {
+          console.log('Updated file:', matches[1], new_file);
+          // download file and update
+          gdfiles[key] = new_file;
+        } else {
+          console.log('File not changed:', matches[1], new_file);
+          gdfiles[key] = new_file;
+        }
+      }
+    }
+  }
+
+  if ( last ) {
+    send_things_to_gd();
+  }
+};
+
+var gdonerrorfiles = function(error, resp) {
+  gdloading = false;
+  console.log(error, resp);
+  if ( resp.error.code == 403 ) {
+    gdstatus('Google Drive rate limit exceeded.');
+    gdratelimited = true;
+    return;
+  }
+
+  gdstatus('Could not load remote data. Trying to re-authorize...');
+
+  gd.checkAuth(function() {
+    //gdload();
+  }, gdauthfail);
 };
 
 var gdload = function() {
   if ( gdloading ) {
-    console.log('cannot load, loading');
-    return;
-  }
-
-  if ( gdsaving ) {
-    console.log('cannot save, loading');
-    gdload_later = true;
+    console.log('cannot load, already loading');
     return;
   }
 
   gdloading = true;
-
   gdstatus('Loading remote data...');
-  gd.loadFile(filename, default_content, function(text) {
-    gdloading = false;
-    console.log('File content:', text);
-    gdstatus('Remote data loaded!');
-    loader(text);
-    if ( gdsave_later ) {
-      gdsave_later = false;
-      force_next_save = true;
-      saver();
-    }
-  }, function(error, resp) {
-    gdloading = false;
-    console.log(error, resp);
-    gdstatus('Could not load remote data. Trying to re-authorize...');
-    gd.checkAuth(function() {
-      gdload();
-    }, function(error, resp) {
-      console.log(error, resp);
-      gdstatus('Could not authorize. Please log in again.');
-      $gdauthorize.show();
-      $gdsync.hide();
-    });
-  });
+
+  gd.loadAllFiles(gdonloadfiles, gdonerrorfiles);
 };
 
 gdstatus('Loading Google Drive...');
@@ -220,7 +400,7 @@ var gdonerror = function(error, resp) {
 gd.load(gdonload, gdonerror);
 
 $(window).bind('focus', function() {
-  gdload();
+  //gdload();
 });
 
 $gdauthorize.bind('click', function() {
@@ -345,8 +525,6 @@ var store = {
  // Save/Load handlers
 /////////////////////////////
 
-var delay_gd_save_timeout;
-var force_next_save = false;
 var saver = function() {
   var save_data = {};
 
@@ -356,17 +534,6 @@ var saver = function() {
   }
 
   store.set(app_data_name, save_data);
-
-  clearTimeout(delay_gd_save_timeout);
-  delay_gd_save_timeout = setTimeout(function() {
-    if ( !force_next_save ) {
-      force_next_save = true;
-      gdload();
-    } else {
-      force_next_save = false;
-      gdsave(JSON.stringify(save_data));
-    }
-  }, 1000);
 };
 
 var loader = function(text, skip_save) {
@@ -377,24 +544,62 @@ var loader = function(text, skip_save) {
     var collection_data = data[collection.name];
 
     if ( collection_data ) {
-      collection.sync(collection_data, skip_save);
+      collection.sync(collection_data, skip_save); // TODO: Do I need this?
+    }
+
+    for ( var key in collection.things ) {
+      if ( collection.things.hasOwnProperty(key) ) {
+        var thing = collection.things[key];
+
+        if ( thing.deleted && thing.gdsaving ) {
+          // Assume we weren't able to delete this item and try again
+          gddelete(thing);
+        } else if ( thing.deleted && !thing.gdsaving ) {
+          // Not sure why you're here, go away
+          collection.del(thing.id);
+        } else {
+          gdfiles[thing.gdfileid] = {
+            id: thing.gdfileid,
+            modifiedTime: thing.gdupdated
+          };
+        }
+      }
     }
   }
 
-  if ( force_next_save ) {
-    saver();
-  }
-
   scroll_notes_window();
+};
+
+var send_things_to_gd = function() {
+  for ( var i = 0, l = collections.length; i < l; i++ ) {
+    var collection = collections[i];
+
+    for ( var key in collection.things ) {
+      if ( collection.things.hasOwnProperty(key) ) {
+        var thing = collection.things[key];
+        // Maybe saved but didn't make it to GD
+        if ( !thing.gdfileid ) {
+          gdsavenew(thing, singles[collection.name]);
+        // Deleted remotely
+        } else if ( thing.gdfileid && !gdfiles[thing.gdfileid].found ) {
+          thing.del();
+          collection.del(key);
+        }
+      }
+    }
+  }
 };
 
   /////////////////////////////
  // Collections
 /////////////////////////////
 
-var add_colection = function(name, constructor, change_fn, load_fn) {
-  var collection = new ThingCollection(name, constructor, change_fn, load_fn);
+var collection_obj = {};
+
+var add_colection = function(name, constructor, change_fn, load_fn, delete_fn) {
+  var collection = new ThingCollection(name, constructor, change_fn, load_fn, delete_fn);
   collections.push(collection);
+  collection_obj[name] = collection;
   return collection;
 };
 
@@ -404,8 +609,8 @@ var category_objs = {};
 var $categories = $();
 var $category_navs = $();
 
-var category_load = function(thing) {
-  console.log('==Category Added!', thing);
+var category_load = function(thing, skip_save) {
+  debug && console.log('==Category Added!', thing);
 
   var $thing = $(category_nav_tpl(thing));
   $thing.data('__thing', thing);
@@ -422,58 +627,95 @@ var category_load = function(thing) {
 
   $categories = $categories.add($category);
 
+  thing.$category = $category;
   thing.$els = $thing.add($option.add($category));
+
+  if ( !skip_save ) {
+    saver();
+  }
+
+  return thing;
 };
 
 var categories = category_objs['categories'] = add_colection('categories', Category, function(thing) {
-  if ( thing.deleted ) {
-    thing.$els.remove();
-  } else {
-    if ( active_category.id === thing.id ) {
-      $category_name.html(thing.title);
-    }
+  debug && console.log('==Category Edited!', thing);
 
-    if ( thing.$els ) {
-      thing.$els.find('[data-type="title"]').html(thing.title);
+  if ( active_category.id === thing.id ) {
+    $category_name.html(thing.title);
+  }
+
+  if ( thing.$els ) {
+    thing.$els.find('[data-type="title"]').html(thing.title);
+
+    if ( thing.saving ) {
+      thing.$els.addClass('saving');
     }
   }
 
   saver();
-}, category_load);
+}, category_load, function(thing) {
+  debug && console.log('==Category Deleted!', thing);
+
+  thing.$els.remove();
+  saver();
+});
 
 // Notes
 
-var notes = category_objs['notes'] = add_colection('notes', Note, function(thing) {
-  if ( thing.deleted ) {
-    console.log('==Note Deleted!', thing);
+var notes = category_objs['notes'] = add_colection('notes', Note, function(thing, changes) {
+  debug && console.log('==Note Edited!', thing);
 
-    thing.$el.remove();
-  } else if ( thing.$el ) {
-    console.log('==Note Edited!', thing);
-
+  if ( changes.body ) {
     var $thing = $(note_tpl(thing));
+
     thing.$el.replaceWith($thing);
 
     $thing.data('__thing', thing);
     thing.$el = $thing;
   }
 
+  if ( changes.category ) {
+    var category = categories.get(thing.category) || general_category;
+    category.$category.append(thing.$el);
+  }
+
+  if ( thing.gdsaving ) {
+    thing.$el.addClass('saving');
+  }
+
   saver();
 }, function(thing) {
-  console.log('==Note Added!', thing);
+  debug && console.log('==Note Added!', thing);
 
   var $thing = $(note_tpl(thing));
+
+  if ( thing.gdsaving ) {
+    $thing.addClass('saving');
+  }
   thing.$el = $thing;
   $thing.data('__thing', thing);
   //$notes_section.append($thing);
   var id = thing.category || "_";
   $categories.filter('[data-id="' + id + '"]').append($thing);
+}, function(thing) {
+  debug && console.log('==Note Deleted!', thing);
+
+  thing.$el.remove();
+  saver();
 });
 
 // Preferences
 
 var preferences = category_objs['preferences'] = add_colection('preferences', Preference, function(thing) {
-  console.log('==Preference Added!', thing);
+  debug && console.log('==Preference Edited!', thing);
+
+  saver();
+}, function(thing) {
+  debug && console.log('==Preference Added!', thing);
+
+  saver();
+}, function(thing) {
+  debug && console.log('==Preference Deleted!', thing);
 
   saver();
 });
@@ -513,8 +755,7 @@ var general_category = {
   title: 'General'
 };
 
-category_load(general_category);
-
+general_category = category_load(general_category, true);
 // Load local data
 
 var $notes_window = $('[data-type="notes-window"]');
@@ -541,7 +782,7 @@ var last_category = preferences.get('last_category');
 
 var active_category = general_category;
 if ( last_category && last_category.value ) {
-  active_category = categories.get(last_category.value);
+  active_category = categories.get(last_category.value) || general_category;
 }
 
 var $category_name = $('[data-type="category-name"]');
@@ -562,14 +803,19 @@ var set_active_category = function(thing, skip_save) {
         id: 'last_category',
         value: thing.id
       });
+      gdsavenew(last_category);
     } else if ( !thing.id && last_category ) {
       last_category.del();
+      gddelete(last_category);
     } else {
       last_category.save([
         {name: 'value', value: thing.id}
       ]);
+      gdsave(last_category);
     }
   }
+
+  active_category = thing;
 };
 
 set_active_category(active_category, true);
@@ -710,6 +956,7 @@ var add_edit_note = function(note, do_scroll) {
 var command_reg = /^\//;
 
 $document
+  // Add Note
   .delegate('[data-type="add-note-wrapper"] form', 'submit', function(ev) {
     ev.preventDefault();
     edit = false;
@@ -720,14 +967,23 @@ $document
 
     if ( body.match(command_reg) ) {
       if ( body === '/delete all notes' ) {
-        localStorage.removeItem(app_data_name);
+        /*localStorage.removeItem(app_data_name);
         gdstatus('Deleting all remote data...');
         gd.deleteFile(filename, function() {
           gdstatus('Remote data deleted.');
         }, function(error, resp) {
           gdstatus('Failed to delete remote data.');
           console.log(error, resp);
-        });
+        });*/
+      } else if ( body === '/delete local notes' ) {
+        /*localStorage.removeItem(app_data_name);
+        gdstatus('Deleting all remote data...');
+        gd.deleteFile(filename, function() {
+          gdstatus('Remote data deleted.');
+        }, function(error, resp) {
+          gdstatus('Failed to delete remote data.');
+          console.log(error, resp);
+        });*/
       }
 
       $body.val('');
@@ -736,6 +992,8 @@ $document
       var note = notes.add(data);
 
       add_edit_note.call(this, note, true);
+
+      gdsavenew(note);
     }
   })
   .delegate('[data-type="upload-image-file"]', 'change', function() {
@@ -809,17 +1067,24 @@ $document
   .delegate('[data-type="add-note"] textarea', 'input drop paste cut delete click', function() {
     autosize(this);
   })
+  // Delete Note
   .delegate('[data-type="notes-window"] [data-type="delete"]', 'click', function(ev) {
     ev.preventDefault();
     var $this = $(this);
     var $thing = $this.closest('[data-type="tpl"]');
     var thing = $thing.data('__thing');
 
-    if ( confirm("Really delete?") ) {
+    if ( confirm('Really delete?') ) {
+      if ( thing.deletehash && confirm('Also delete imgur image?') ) {
+        imgur.delete(thing.deletehash);
+      }
+
       thing.del();
+
+      gddelete(thing);
     }
   })
-  // Edit
+  // Edit Note
   .delegate('[data-type="notes-window"] [data-type="edit"]', 'click', function() {
     var $this = $(this);
     var $note = $this.closest('[data-type="tpl"]');
@@ -829,13 +1094,19 @@ $document
     $edit_note_category.val(note_edit.category);
     $edit_note_id.val(note_edit.id);
     $note.append($edit_note);
+    $edit_note_body.focus();
     scroll_notes_window();
   })
   .delegate('[data-thing="note"] form', 'submit', function(ev) {
     ev.preventDefault();
     var $this = $(this);
     var data = $this.serializeArray();
+    $edit_note.detach();
+
     note_edit.save(data);
+
+    note_edit.$el.addClass('saving');
+    gdsave(note_edit);
 
     add_edit_note.call(this, note_edit);
   })
@@ -859,7 +1130,33 @@ $document
       ]);
     }
   })
+  // Mobile note tools show
+  .delegate('[data-touched="false"]', 'touchstart', function() {
+    $(this).attr('data-touched', undefined);
+  })
+  .delegate('[data-touched="false"] [data-thing="note"]', 'mouseover', function() {
+    var $this = $(this);
+    $('[data-thing="note"]').removeClass('hover');
+    $this.addClass('hover');
+  })
+  .delegate('[data-thing="note"]', 'touchstart', function() {
+    has_scrolled = false;
+  })
+  .delegate('*', 'touchmove', function() {
+    has_scrolled = true;
+  })
+  .delegate('[data-thing="note"]', 'touchend', function() {
+    var $this = $(this);
+    if ( !has_scrolled ) {
+      $('[data-thing="note"]').removeClass('focus');
+      $this.addClass('focus');
+    }
+
+    has_scrolled = false;
+  })
   ;
+
+var has_scrolled = false;
 
 // Add/Edit Category
 
@@ -879,6 +1176,7 @@ $document
     ev.preventDefault();
     $edit_category.detach();
   })
+  // Delete category
   .delegate('[data-type="add-edit-category-form"] [data-type="delete"]', 'click', function(ev) {
     ev.preventDefault();
     var $this = $(this);
@@ -893,13 +1191,15 @@ $document
         note.save([{name: 'category', value: undefined}]);
       }
 
-      if ( active_category.id == thing.id ) {
+      if ( active_category.id === thing.id ) {
         set_active_category(general_category);
       }
 
       thing.del();
+      gddelete(thing);
     }
   })
+  // Add Category
   .delegate('[data-type="add-category-wrapper"] form', 'submit', function(ev) {
     ev.preventDefault();
     var $this = $(this);
@@ -907,12 +1207,15 @@ $document
     var data = $this.serializeObject();
     var category = categories.add(data);
 
+    gdsavenew(category);
+
     set_active_category(category);
 
     this.reset();
 
     $wrapper.hide();
   })
+  // Edit Category
   .delegate('[data-type="category-navs"] form', 'submit', function(ev) {
     ev.preventDefault();
     var $this = $(this);
@@ -921,6 +1224,7 @@ $document
     var data = $this.serializeArray();
 
     thing.save(data);
+    gdsave(thing);
 
     this.reset();
 

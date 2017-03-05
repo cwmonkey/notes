@@ -20,11 +20,11 @@ Preference.prototype.constructor = Preference;
 Preference.prototype.setup = function(params) {
   debug && console.log('Preference.setup');
 
-  this.attrs = [
-    {property: 'value', alias: 'v'},
-    {property: 'deleted', alias: 'd'},
-    {property: 'updated', alias: 'u'}
-  ];
+  this.type = 'preference';
+
+  this.attrs.push(
+    {property: 'value', alias: 'v'}
+  );
 };
 
 // Nothing yet

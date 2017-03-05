@@ -14,8 +14,6 @@ var GoogleDriveAPI = function(params) {
 	if ( typeof this.scopes !== 'string' ) {
 		this.scopes = this.scopes.join(' ');
 	}
-
-	this.files = {};
 };
 
 GoogleDriveAPI.prototype.errors = {
@@ -61,7 +59,10 @@ GoogleDriveAPI.prototype.checkAuth = function(onload, onerror) {
 		console.log(auth_result);
 
 		if (auth_result && !auth_result.error) {
-			onload();
+			gapi.client.load('drive', 'v3', function() {
+				// TODO: error checking?
+				onload();
+			});
 		} else {
 			onerror(self.errors.immediate_auth);
 		}
@@ -78,127 +79,126 @@ GoogleDriveAPI.prototype.checkAuthManual = function(onload, onerror) {
 	}, function(auth_result) {
 		console.log(auth_result);
 		if (auth_result && !auth_result.error) {
-			onload();
+			gapi.client.load('drive', 'v3', function() {
+				// TODO: error checking?
+				onload();
+			});
 		} else {
 			onerror(self.errors.manual_auth);
 		}
 	});
 };
 
-GoogleDriveAPI.prototype._readFile = function(file, onload, onerror) {
-	var self = this;
-	var token = gapi.auth.getToken();
-
-	if ( !token ) {
-		this.checkAuth(function() {
-			self._readFile(file, onload, onerror);
-		}, onerror);
-		return;
-	}
-
-	var accessToken = token.access_token;
-	var xhr = new XMLHttpRequest();
-	xhr.open('GET', file.downloadUrl);
-	xhr.setRequestHeader('Authorization', 'Bearer ' + accessToken);
-
-	xhr.onload = function() {
-		onload(xhr.responseText);
-	};
-
-	xhr.onerror = function(resp) {
-		onerror(this.errors.read_file, resp);
-	};
-
-	xhr.send();
-};
-
-GoogleDriveAPI.prototype.loadFile = function(filename, content, onload, onerror) {
+GoogleDriveAPI.prototype.getFile = function(file, onload, onerror) {
 	var self = this;
 
-	if ( this.files[filename] ) {
-		this._readFile(this.files[filename], onload, onerror);
-		return;
-	}
+	var request = gapi.client.drive.files.get({
+		fileId: file.id,
+		alt: 'media'
+	});
 
-	gapi.client.load('drive', 'v2', function() {
-		var query = "trashed=false and 'appfolder' in parents";
-
-		var request = gapi.client.drive.files.list({
-			'maxResults': 10,
-			'q': query
-		});
-
-		request.execute(function (resp) {
-			if (!resp.error) {
-				var found = false;
-				var file;
-
-				if ( resp.items.length > 0 ) {
-					for ( var i = 0; i < resp.items.length; i++ ) {
-						file = resp.items[i];
-						if ( resp.items[i].title !== filename ) continue;
-						self.files[filename] = file;
-						self._readFile(file, onload, onerror);
-						found = true;
-						break;
-					}
-				}
-
-				if ( !found ) {
-					var boundary = '-------314159265358979323846264';
-					var delimiter = "\r\n--" + boundary + "\r\n";
-					var close_delim = "\r\n--" + boundary + "--";
-
-					var contentType = 'text/plain';
-					var metadata = {
-						'title': filename,
-						'mimeType': contentType,
-						'parents': [{'id': 'appfolder'}]
-					};
-
-					var base64Data = btoa(content);
-					var multipartRequestBody =
-						delimiter +
-						'Content-Type: application/json\r\n\r\n' +
-						JSON.stringify(metadata) +
-						delimiter +
-						'Content-Type: ' + contentType + '\r\n' +
-						'Content-Transfer-Encoding: base64\r\n' +
-						'\r\n' +
-						base64Data +
-						close_delim;
-
-					var request = gapi.client.request({
-						'path': '/upload/drive/v2/files',
-						'method': 'POST',
-						'params': {
-							uploadType: 'multipart'
-						},
-						'headers': {
-							'Content-Type': 'multipart/mixed; boundary="' + boundary + '"'
-						},
-						'body': multipartRequestBody
-					});
-
-					request.execute(function(resp) {
-						if ( resp && !resp.error ) {
-							self.files[filename] = resp;
-							onload(content);
-						} else {
-							onerror(self.errors.new_file, resp);
-						}
-					});
-				}
-			} else {
-				onerror(self.errors.list_files, resp);
-			}
-		});
+	request.execute(function (resp) {
+		if ( resp.error ) {
+			onerror(self.errors.read_file, resp);
+		} else {
+			onload(resp);
+		}
 	});
 };
 
-GoogleDriveAPI.prototype.updateFile = function(filename, content, onload, onerror) {
+GoogleDriveAPI.prototype.loadAllFiles = function(onload, onerror, page_token) {
 	var self = this;
-	var file = this.files[filename];
+	var request;
+
+	if ( page_token ) {
+		request = gapi.client.drive.files.list({
+			'pageToken': page_token
+		});
+	} else {
+		request = gapi.client.drive.files.list({
+			spaces: 'appDataFolder',
+			fields: 'nextPageToken, files(id, name, modifiedTime, webContentLink)',
+			pageSize: 1000,
+			orderBy: 'name'
+		});
+	}
+
+	request.execute(function (resp) {
+		if ( !resp || resp.error) {
+			onerror(self.errors.list_files, resp);
+			return;
+		}
+
+		var page_token = resp.nextPageToken;
+		var found = false;
+		var file;
+		var files = {};
+
+		if ( resp.files.length > 0 ) {
+			for ( var i = 0; (file = resp.files[i]); i++ ) {
+				files[file.id] = file;
+			}
+		}
+
+		if ( page_token ) {
+			// recursion
+			self._loadAllFiles(onload, onerror, page_token);
+			onload(files);
+		} else {
+			onload(files, true);
+		}
+
+	});
+};
+
+GoogleDriveAPI.prototype.addFile = function(filename, content, onload, onerror) {
+	var self = this;
+	var boundary = '-------314159265358979323846264';
+	var delimiter = "\r\n--" + boundary + "\r\n";
+	var close_delim = "\r\n--" + boundary + "--";
+
+	var contentType = 'text/plain';
+	var metadata = {
+		'title': filename,
+		'mimeType': contentType,
+		'parents': [{'id': 'appfolder'}]
+	};
+
+	var base64Data = btoa(content);
+	var multipartRequestBody =
+		delimiter +
+		'Content-Type: application/json\r\n\r\n' +
+		JSON.stringify(metadata) +
+		delimiter +
+		'Content-Type: ' + contentType + '\r\n' +
+		'Content-Transfer-Encoding: base64\r\n' +
+		'\r\n' +
+		base64Data +
+		close_delim;
+
+	var request = gapi.client.request({
+		'path': '/upload/drive/v2/files',
+		'method': 'POST',
+		'params': {
+			uploadType: 'multipart'
+		},
+		'headers': {
+			'Content-Type': 'multipart/mixed; boundary="' + boundary + '"'
+		},
+		'body': multipartRequestBody
+	});
+
+	request.execute(function(resp) {
+		if ( !resp || resp.error ) {
+			onerror(self.errors.new_file, resp);
+		} else {
+			onload(resp);
+		}
+	});
+};
+
+GoogleDriveAPI.prototype.updateFile = function(file, content, onload, onerror) {
+	var self = this;
 	var boundary = '-------314159265358979323846';
 	var delimiter = "\r\n--" + boundary + "\r\n";
 	var close_delim = "\r\n--" + boundary + "--";
@@ -216,6 +216,7 @@ GoogleDriveAPI.prototype.updateFile = function(filename, content, onload, onerro
 		base64Data +
 		close_delim;
 
+	// TODO: v3
 	var request = gapi.client.request({
 		'path': '/upload/drive/v2/files/' + file.id,
 		'method': 'PUT',
@@ -233,23 +234,22 @@ GoogleDriveAPI.prototype.updateFile = function(filename, content, onload, onerro
 		if ( !resp || resp.error ) {
 			onerror(self.errors.update_file, resp);
 		} else {
-			onload();
+			onload(resp);
 		}
 	});
 };
 
-GoogleDriveAPI.prototype.deleteFile = function(filename, onload, onerror) {
+GoogleDriveAPI.prototype.deleteFile = function(file, onload, onerror) {
 	var self = this;
-	var file = this.files[filename];
 	var request = gapi.client.drive.files.delete({
 		'fileId': file.id
 	});
 
 	request.execute(function(resp) {
-		if (resp.error) {
+		if ( !resp || resp.error ) {
 			onerror(self.errors.delete_file, resp);
 		} else {
-			onload();
+			onload(resp);
 		}
 	});
 };

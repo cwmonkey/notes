@@ -18,9 +18,14 @@ var Thing = function(params) {
 
   // Long property name vs. stored short name
   this.attrs = [
-    {property: 'deleted', alias: 'd'},
+    {property: 'gdfileid', alias: 'f', gd: true}, // specific to google drive files
+    {property: 'gdupdated', alias: 'p', gd: true},
+    {property: 'gdsaving', alias: 's', gd: true},
+    {property: 'deleted', alias: 'd'}, // maybe get rid of these
     {property: 'updated', alias: 'u'}
   ];
+
+  this.type = null;
 
   // For prototyping Thing:
   this.setup(params);
@@ -59,8 +64,11 @@ Thing.prototype.update = function(name, value) {
     this.updated = Date.now().toString(36);
   }
 
+  var changes = {};
+  changes[name] = value;
+
   if ( this.onChange ) {
-    this.onChange(this);
+    this.onChange(this, changes);
   }
 };
 
@@ -69,6 +77,7 @@ Thing.prototype.save = function(values) {
   debug && console.log('Thing.save', values);
   var self = this;
   var modified = false;
+  var changes = {};
 
   values.forEach(function(val) {
     var value = val.value || undefined;
@@ -76,6 +85,7 @@ Thing.prototype.save = function(values) {
     if ( value !== self[val.name] ) {
       self[val.name] = value;
       modified = true;
+      changes[val.name] = true;
     }
   });
 
@@ -84,7 +94,7 @@ Thing.prototype.save = function(values) {
   }
 
   if ( this.onChange ) {
-    this.onChange(this);
+    this.onChange(this, changes);
   }
 };
 
@@ -92,28 +102,19 @@ Thing.prototype.save = function(values) {
 Thing.prototype.del = function() {
   debug && console.log('Thing.del', this);
 
-  var del_params = [];
-  this.attrs.forEach(function(val) {
-    if ( val.property == 'deleted' ) {
-      del_params.push({name: val.property, value: 1});
-    } else {
-      del_params.push({name: val.property, value: undefined});
-    }
-  });
-
-  this.save(del_params);
+  this.save([{name: 'deleted', value: 1}]);
 
   return true;
 };
 
 // Export to simple array
-Thing.prototype.export = function() {
+Thing.prototype.export = function(skip_gd) {
   debug && console.log('Thing.export', this);
   var ret = {};
   var self = this;
 
   this.attrs.forEach(function(val) {
-    if ( self[val.property] !== undefined ) {
+    if ( self[val.property] !== undefined && (!skip_gd || !val.gd) ) {
       ret[val.alias] = self[val.property];
     }
   });

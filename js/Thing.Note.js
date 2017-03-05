@@ -20,16 +20,14 @@ Note.prototype.constructor = Note;
 Note.prototype.setup = function(params) {
   debug && console.log('Note.setup');
 
-  this.attrs = [
+  this.type = 'note';
+
+  this.attrs.push(
     {property: 'category', alias: 'c'},
     {property: 'body', alias: 'b'},
     {property: 'image', alias: 'i'},
-    // {property: 'width', alias: 'w'},
-    // {property: 'height', alias: 'e'},
-    {property: 'deletehash', alias: 'h'}, // specific to imgur images
-    {property: 'deleted', alias: 'd'},
-    {property: 'updated', alias: 'u'}
-  ];
+    {property: 'deletehash', alias: 'h'} // specific to imgur images
+  );
 };
 
 // Nothing yet

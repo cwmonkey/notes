@@ -98,7 +98,11 @@ input {
 
     &:hover {
       .add {
-        opacity: 1;
+        opacity: .6;
+
+        &:hover {
+          opacity: 1;
+        }
       }
     }
   }
@@ -127,6 +131,7 @@ input {
 
   .category_text {
     width: 100%;
+    font-size: 16px;
   }
 
   .delete,
@@ -292,7 +297,8 @@ input {
       opacity: .6;
       border-radius: .25em;
       font-size: 14px;
-      padding: .1em .5em;
+      padding: 0 .5em;
+      line-height: 2;
 
       &:focus,
       &:hover {
@@ -350,8 +356,8 @@ input {
       padding-bottom: 15px;
     }
 
-    &:focus,
-    &:hover {
+    &.focus,
+    &.hover {
       .tools {
         display: block;
       }
@@ -549,6 +555,13 @@ input {
     overflow: hidden;
   }
 
+  // Google Drive status
+  .gdstatus {
+    font-size: 14px;
+    margin-bottom: 10px;
+    opacity: .8;
+  }
+
   // Edit note
   .note {
     .add_edit_note_form {
@@ -734,6 +747,10 @@ input {
     white-space: normal;
     max-width: 80vh;
   }
+}
+
+.saving {
+  opacity: .5;
 }
 
 @import "color-scheme";

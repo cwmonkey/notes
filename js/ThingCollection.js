@@ -2,13 +2,14 @@
 
 debug = debug || ThingDebug || ThingCollectionDebug;
 
-var ThingCollection = function(name, constructor, save_fn, load_fn) {
-  debug && console.log('ThingCollection', name, constructor, save_fn, load_fn);
+var ThingCollection = function(name, constructor, save_fn, load_fn, delete_fn) {
+  debug && console.log('ThingCollection', name, constructor, save_fn, load_fn, delete_fn);
 
   this.name = name;
   this.constructor = constructor;
   this.saveFn = save_fn;
   this.loadFn = load_fn;
+  this.deleteFn = delete_fn;
   this.length = 0;
 
   this.things = {};
@@ -45,7 +46,8 @@ ThingCollection.prototype.getByParams = function(params) {
   return found;
 };
 
-ThingCollection.prototype.add = function(params, skip_save) {
+// params = {name1: val1, name2: val2 ... }
+ThingCollection.prototype.add = function(params) {
   debug && console.log('ThingCollection.add', params);
   var data = {
     values: params,
@@ -56,18 +58,24 @@ ThingCollection.prototype.add = function(params, skip_save) {
   var thing = new this.constructor(data);
   this.things[thing.id] = thing;
 
-  if ( !skip_save ) {
-    this.save();
-  }
-
   this.length++;
 
   return thing;
 };
 
+ThingCollection.prototype.del = function(id) {
+  debug && console.log('ThingCollection.del', id);
+
+  var thing = this.things[id];
+
+  delete this.things[id];
+
+  this.deleteFn(thing);
+};
+
 ThingCollection.prototype.save = function() {
   debug && console.log('ThingCollection.save');
-  this.saveFn(name, this.things);
+  this.saveFn(this.name, this.things);
 };
 
 ThingCollection.prototype.export = function() {
@@ -136,7 +144,7 @@ ThingCollection.prototype.sync = function(data, skip_save) {
           changed = true;
         }
       // Thing doesn't exist, add it
-      } else {
+      } else if ( !new_thing.d ) {
         this.add(new_thing, true);
         changed = true;
       }

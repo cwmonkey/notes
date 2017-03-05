@@ -20,11 +20,11 @@ Category.prototype.constructor = Category;
 Category.prototype.setup = function(params) {
   debug && console.log('Category.setup');
 
-  this.attrs = [
-    {property: 'title', alias: 't'},
-    {property: 'deleted', alias: 'd'},
-    {property: 'updated', alias: 'u'}
-  ];
+  this.type = 'category';
+
+  this.attrs.push(
+    {property: 'title', alias: 't'}
+  );
 };
 
 // Nothing yet

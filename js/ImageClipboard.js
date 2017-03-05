@@ -23,13 +23,13 @@ var ImageClipboard = function(cb) {
       for (var i = 0; i < items.length; i++) {
         if (items[i].type.indexOf("image") !== -1) {
           //image
+          e.preventDefault();
           var blob = items[i].getAsFile();
           var URLObj = window.URL || window.webkitURL;
           var source = URLObj.createObjectURL(blob);
           this.paste_createImage(source);
         }
       }
-      e.preventDefault();
     }
   };
   //draw pasted image to canvas

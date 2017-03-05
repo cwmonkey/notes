@@ -1,5 +1,4 @@
 $delete_color: #de0c27;
-$add_color: #69dc7e;
 
 .secondary {
   $secondary_background: #252627;
@@ -10,12 +9,7 @@ $add_color: #69dc7e;
     color: lighten($secondary_background, 60%);
 
     .add {
-      color: lighten($secondary_background, 70%);
-
-      &:focus,
-      &:hover {
-        color: $add_color;
-      }
+      color: lighten($secondary_background, 80%);
     }
   }
 
@@ -64,6 +58,8 @@ $add_color: #69dc7e;
 .primary {
   $primary_color: #252627;
   $background_color: #FBF9FB;
+  $header_footer_background_color: #4B88A2;
+  $header_footer_color: #FBF9FB;
 
   background: $background_color;
   color: $primary_color;
@@ -75,7 +71,7 @@ $add_color: #69dc7e;
   .note {
     border-color: lighten($primary_color, 70%);
 
-    &:hover {
+    &.hover {
       background: lighten($primary_color, 80%);
     }
   }
@@ -133,15 +129,16 @@ $add_color: #69dc7e;
   }
 
   .add_note {
+    background: $header_footer_background_color;
+    color: $header_footer_color;
     border-color: lighten($primary_color, 70%);
   }
 
-  .add_image {
-    &:before {
-      border-color: $primary_color;
-      background: $background_color;
-      color: $primary_color;
-    }
+  .submit_note,
+  .add_image:before {
+    border-color: $primary_color;
+    background: $background_color;
+    color: $primary_color;
   }
 
   .note_body {

@@ -33,7 +33,7 @@ layout: null
 {% endif %}
 
 </head>
-<body>
+<body data-touched="false">
 
 <div class="wrap"><main class="main">
 
@@ -58,7 +58,6 @@ layout: null
           <button data-type="gdsync" style="display: none;">Sync Google Drive</button>
         </div>
       </div>
-      <p data-type="gdstatus">&nbsp;</p>
     </div>
     <section class="notes_wrapper" data-type="notes-window">
       <div class="top cms">
@@ -67,6 +66,7 @@ layout: null
       <div data-type="notes"></div>
     </section>
     <section class="add_note" data-type="add-note-wrapper">
+      <p class="gdstatus" data-type="gdstatus">&nbsp;</p>
     </section>
     <div id="tools_wrapper" data-type="tools-wrapper">
       <textarea id="copyr"></textarea>
@@ -80,7 +80,7 @@ layout: null
 
 {% if site.local %}
   <script>
-    window.debug = true;
+    // window.debug = true;
   </script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js" defer></script>
 {% else %}
