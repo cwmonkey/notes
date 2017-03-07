@@ -735,6 +735,10 @@ function(thing, changes) {
   if ( changes.body ) {
     var $thing = $(note_tpl(thing));
 
+    // Open links in new window
+    // TODO: DRY
+    $thing.find('a').attr('target', '_blank');
+
     thing.$el.replaceWith($thing);
 
     $thing.data('__thing', thing);
@@ -753,6 +757,10 @@ function(thing, changes) {
   saver();
 }, function(thing) {
   var $thing = $(note_tpl(thing));
+
+  // Open links in new window
+  // TODO: DRY
+  $thing.find('a').attr('target', '_blank');
 
   if ( thing.gdsaving ) {
     $thing.addClass('saving');
