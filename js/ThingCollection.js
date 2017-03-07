@@ -80,7 +80,7 @@ ThingCollection.prototype.getByParams = function(params) {
 };
 
 // params = {name1: val1, name2: val2 ... }
-ThingCollection.prototype.add = function(params, skip_save) {
+ThingCollection.prototype.add = function(params) {
   me.debug && this.log('.add', this.name, params);
   var data = {
     values: params,
@@ -88,10 +88,15 @@ ThingCollection.prototype.add = function(params, skip_save) {
     onChange: this.saveFn,
   };
 
-  var thing = new this.constructor(data, skip_save);
-  this.things[thing.id] = thing;
+  var thing = new this.constructor(data);
 
-  this.length++;
+  if ( !thing.deleted ) {
+    this.things[thing.id] = thing;
+
+    this.length++;
+
+    thing.onLoad(thing);
+  }
 
   return thing;
 };
@@ -125,8 +130,8 @@ ThingCollection.prototype.export = function() {
   return things_export;
 };
 
-ThingCollection.prototype.sync = function(data, skip_save) {
-  me.debug && this.log('.sync', this.name, data, skip_save);
+ThingCollection.prototype.sync = function(data) {
+  me.debug && this.log('.sync', this.name, data);
   var new_things;
   var changed = false;
   var is_different = false;
@@ -173,12 +178,12 @@ ThingCollection.prototype.sync = function(data, skip_save) {
             });
           }
 
-          thing.save(save_thing, true);
+          thing.save(save_thing);
           changed = true;
         }
       // Thing doesn't exist, add it
       } else if ( !new_thing.d ) {
-        this.add(new_thing, true);
+        this.add(new_thing);
         changed = true;
       }
     }
@@ -194,7 +199,7 @@ ThingCollection.prototype.sync = function(data, skip_save) {
     }
   }
 
-  if ( changed && !skip_save ) {
+  if ( changed ) {
     me.debug && this.log('.sync', this.name, 'changed', this);
     this.save();
   }

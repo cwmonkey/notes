@@ -1,6 +1,6 @@
 ;(function(ThingDebug, debug, undefined) {
 
-var Thing = function(params, skip_save) {
+var Thing = function(params) {
   me.debug && this.log(' new Thing', params);
   var self = this;
 
@@ -42,10 +42,6 @@ var Thing = function(params, skip_save) {
 
   // For prototyping Thing:
   this.init(params);
-
-  if ( !this.deleted && this.onLoad ) {
-    this.onLoad(this, skip_save);
-  }
 };
 
 var me = Thing;
@@ -106,7 +102,7 @@ Thing.prototype.update = function(name, value) {
 };
 
 // Save multiple values with the format [{name: name1, value: value1}, ...]
-Thing.prototype.save = function(values, skip_save) {
+Thing.prototype.save = function(values) {
   me.debug && this.log('.save', values);
   var self = this;
   var modified = false;
@@ -126,9 +122,7 @@ Thing.prototype.save = function(values, skip_save) {
     this.updated = Date.now().toString(36);
   }
 
-  if ( this.onChange && !skip_save ) {
-    this.onChange(this, changes);
-  }
+  this.onChange(this, changes);
 };
 
 // Empty object

@@ -1,6 +1,8 @@
 /*
 TODO:
 Fix deleting categories
+Open links in new windows
+Category edit icon on mobile
 
 When category deleted and notes moved to General, show notes and sort
 Note sorting
@@ -59,6 +61,27 @@ App.trace = function() {
 var me = App;
 
 me.log('loading...');
+
+/**
+ * Sort a list of elements and apply the order to the DOM.
+ *
+ * https://gist.github.com/mindplay-dk/6825439
+ */
+jQuery.fn.order = function(asc, fn) {
+  fn = fn || function (el) {
+    return $(el).text().replace(/^\s+|\s+$/g, '');
+  };
+  var T = asc !== false ? 1 : -1,
+      F = asc !== false ? -1 : 1;
+  this.sort(function (a, b) {
+    a = fn(a), b = fn(b);
+    if (a == b) return 0;
+    return a < b ? F : T;
+  });
+  this.each(function (i) {
+    this.parentNode.appendChild(this);
+  });
+};
 
   /////////////////////////////
  // Textarea resizer
@@ -319,7 +342,7 @@ var gdqueuedownload = function(file, onload, onerror) {
 
 var plurals = {'note': 'notes', 'category': 'categories', 'preference': 'preferences'};
 var singles = {'notes': 'note', 'categories': 'category', 'preferences': 'preference'};
-var gdaddthing = function(id, type, file, skip_save) {
+var gdaddthing = function(id, type, file) {
   gdstatus('Retrieving from Google Drive...');
   gdqueuedownload(file, function(content) {
     gdstatus('Retrieved from Google Drive.');
@@ -327,11 +350,17 @@ var gdaddthing = function(id, type, file, skip_save) {
     if ( typeof content === 'string' ) {
       data = JSON.parse(content);
     }
+
     data.gdfileid = file.id;
     data.gdupdated = file.modifiedTime;
     data.id = id;
 
-    collection_obj[plurals[type]].add(data, skip_save);
+    var thing = collection_obj[plurals[type]].add(data);
+
+    if ( thing.deleted ) {
+      // File got saved after being deleted - shouldn't be possible
+      gddelete(thing);
+    }
   }, function(error, resp) {
     me.debug && me.log('gdaddthing', error, resp);
     if ( resp.error.code == 403 ) {
@@ -343,7 +372,7 @@ var gdaddthing = function(id, type, file, skip_save) {
     gdstatus('Could retrieve from Google Drive. Trying to re-authorize...');
 
     gd.checkAuth(function() {
-      gdaddthing(id, type, file, skip_save);
+      gdaddthing(id, type, file);
     }, gdauthfail);
   });
 };
@@ -361,12 +390,12 @@ var gdonloadfiles = function(files, last) {
       new_file = files[key];
 
       new_file.found = true;
-      me.debug && me.log('File:', new_file);
+      me.debug && me.log('File Meta:', new_file);
       if ( (matches = new_file.name.match(filename_reg)) ) {
         file = gdfiles[key];
         if ( !file ) {
-          gdaddthing(matches[2], matches[1], new_file);
           // download file and save
+          gdaddthing(matches[2], matches[1], new_file);
           gdfiles[key] = new_file;
         } else if ( Date.parse(file.modifiedTime) < Date.parse(new_file.modifiedTime) ) {
           // download file and update
@@ -555,7 +584,14 @@ var store = {
  // Save/Load handlers
 /////////////////////////////
 
-var saver = function() {
+var loading = false;
+var saver_timeout;
+
+var _save = function() {
+  if ( loading ) {
+    return;
+  }
+
   var save_data = {};
 
   for ( var i = 0, l = collections.length; i < l; i++ ) {
@@ -567,7 +603,12 @@ var saver = function() {
   store.set(app_data_name, save_data);
 };
 
-var loader = function(text, skip_save) {
+var saver = function() {
+  clearTimeout(saver_timeout);
+  saver_timeout = setTimeout(_save, 10);
+};
+
+var loader = function(text) {
   var data = JSON.parse(text);
   me.debug && me.log('loader', data);
 
@@ -576,7 +617,7 @@ var loader = function(text, skip_save) {
     var collection_data = data[collection.name];
 
     if ( collection_data ) {
-      collection.sync(collection_data, skip_save); // TODO: Do I need this?
+      collection.sync(collection_data); // TODO: Do I need this?
     }
 
     for ( var key in collection.things ) {
@@ -641,7 +682,7 @@ var category_objs = {};
 var $categories = $();
 var $category_navs = $();
 
-var category_load = function(thing, skip_save) {
+var category_load = function(thing) {
   var $thing = $(category_nav_tpl(thing));
   $thing.data('__thing', thing);
   $category_navs_section.append($thing);
@@ -660,15 +701,14 @@ var category_load = function(thing, skip_save) {
   thing.$category = $category;
   thing.$els = $thing.add($option.add($category));
 
-  if ( !skip_save ) {
-    saver();
-  }
+  saver();
 
   return thing;
 };
 
-var categories = category_objs.categories = add_colection('categories', Category, function(thing) {
-  if ( active_category.id === thing.id ) {
+var categories = category_objs.categories = add_colection('categories', Category,
+function(thing, changes) {
+  if ( active_category && active_category.id === thing.id ) {
     $category_name.html(thing.title);
   }
 
@@ -682,13 +722,16 @@ var categories = category_objs.categories = add_colection('categories', Category
 
   saver();
 }, category_load, function(thing) {
-  thing.$els.remove();
+  if ( thing.$els ) {
+    thing.$els.remove();
+  }
   saver();
 });
 
 // Notes
 
-var notes = category_objs.notes = add_colection('notes', Note, function(thing, changes) {
+var notes = category_objs.notes = add_colection('notes', Note,
+function(thing, changes) {
   if ( changes.body ) {
     var $thing = $(note_tpl(thing));
 
@@ -718,7 +761,20 @@ var notes = category_objs.notes = add_colection('notes', Note, function(thing, c
   $thing.data('__thing', thing);
   //$notes_section.append($thing);
   var id = thing.category || "_";
-  $categories.filter('[data-id="' + id + '"]').append($thing);
+  var $category = $categories.filter('[data-id="' + id + '"]');
+  // In case we have notes that don't have associated categories.
+  // Shouldn't be able to happen
+  if ( !$category.length ) {
+    $category = $categories.filter('[data-id="_"]');
+  }
+  $category.append($thing);
+
+  $category.find('[data-thing="note"]').order(true, function (el) {
+    return $(el).data('__thing').id;
+  });
+
+  saver();
+  scroll_notes_window();
 }, function(thing) {
   thing.$el.remove();
   saver();
@@ -727,7 +783,7 @@ var notes = category_objs.notes = add_colection('notes', Note, function(thing, c
 // Preferences
 
 var preferences = category_objs.preferences = add_colection('preferences', Preference,
-function(thing) {
+function(thing, changes) {
   saver();
 }, function(thing) {
   saver();
@@ -770,7 +826,8 @@ var general_category = {
   title: 'General'
 };
 
-general_category = category_load(general_category, true);
+loading = true;
+general_category = category_load(general_category);
 // Load local data
 
 var $notes_window = $('[data-type="notes-window"]');
@@ -834,6 +891,8 @@ var set_active_category = function(thing, skip_save) {
 };
 
 set_active_category(active_category, true);
+
+loading = false;
 
 var $add_category_form = $('[data-type="add-category"]');
 
@@ -1029,6 +1088,8 @@ $document
 
       gdsavenew(note);
     }
+
+    store.remove(note_body_data_name);
   })
   .delegate('[data-type="upload-image-file"]', 'change', function() {
     var $this = $(this);
@@ -1223,6 +1284,7 @@ $document
 
       for ( var i = 0, note; (note = fnotes[i]); i++ ) {
         note.save([{name: 'category', value: undefined}]);
+        gdsave(note);
       }
 
       if ( active_category.id === thing.id ) {
