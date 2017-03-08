@@ -1,9 +1,9 @@
 /*
 TODO:
 Fix deleting categories
-Open links in new windows
 Category edit icon on mobile
 
+Allow imgur users to log into their accounts
 When category deleted and notes moved to General, show notes and sort
 Note sorting
 Category sorting
@@ -264,7 +264,7 @@ var gdsave = function(thing) {
       thing.$els.removeClass('saving');
     }
   }, function(error, resp) {
-    me.debug && me.log('gdsave', error, resp);
+    me.debug && me.log('gdsave', error, resp, file);
     if ( resp.error.code == 403 ) {
       gdstatus('Google Drive rate limit exceeded.');
       gdratelimited = true;
@@ -655,7 +655,7 @@ var send_things_to_gd = function() {
           gdsavenew(thing, singles[collection.name]);
         // Deleted remotely
         } else if ( thing.gdfileid && !gdfiles[thing.gdfileid].found ) {
-          thing.del();
+          //thing.del();
           collection.del(key);
         }
       }
@@ -722,6 +722,10 @@ function(thing, changes) {
 
   saver();
 }, category_load, function(thing) {
+  if ( active_category.id === thing.id ) {
+    set_active_category(general_category);
+  }
+
   if ( thing.$els ) {
     thing.$els.remove();
   }
@@ -750,7 +754,7 @@ function(thing, changes) {
     category.$category.append(thing.$el);
   }
 
-  if ( thing.gdsaving ) {
+  if ( thing.gdsaving && thing.$el ) {
     thing.$el.addClass('saving');
   }
 
@@ -785,6 +789,7 @@ function(thing, changes) {
   scroll_notes_window();
 }, function(thing) {
   thing.$el.remove();
+
   saver();
 });
 
@@ -1272,9 +1277,6 @@ $document
 
     set_active_category(thing);
   })
-  .delegate('[data-type="add-category-label"]', 'click', function() {
-    $add_category_wrapper.show().find('[data-type="category-title"]').focus();
-  })
   .delegate('[data-type="add-edit-category-form"] [data-type="cancel"]', 'click', function(ev) {
     ev.preventDefault();
     $edit_category.detach();
@@ -1295,19 +1297,22 @@ $document
         gdsave(note);
       }
 
-      if ( active_category.id === thing.id ) {
-        set_active_category(general_category);
-      }
+      collection_obj.categories.del(thing.id);
 
-      thing.del();
+      //thing.del();
       gddelete(thing);
     }
   })
   // Add Category
+  .delegate('[data-type="add-category-label"]', 'click', function() {
+    $add_category_wrapper.show().find('[data-type="category-title"]').focus();
+  })
+  .delegate('[data-type="add-category-label"] [data-type="cancel"]', 'click', function() {
+    $add_category_wrapper.hide();
+  })
   .delegate('[data-type="add-category-wrapper"] form', 'submit', function(ev) {
     ev.preventDefault();
     var $this = $(this);
-    var $wrapper = $this.closest('[data-type="add-edit-category-form"]');
     var data = $this.serializeObject();
     var category = categories.add(data);
 
@@ -1317,7 +1322,7 @@ $document
 
     this.reset();
 
-    $wrapper.hide();
+    $add_category_wrapper.hide();
   })
   // Edit Category
   .delegate('[data-type="category-navs"] form', 'submit', function(ev) {

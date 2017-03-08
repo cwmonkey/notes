@@ -106,9 +106,11 @@ ThingCollection.prototype.del = function(id) {
 
   var thing = this.things[id];
 
-  delete this.things[id];
+  if ( thing ) {
+    delete this.things[id];
 
-  this.deleteFn(thing);
+    this.deleteFn(thing);
+  }
 };
 
 ThingCollection.prototype.save = function() {
