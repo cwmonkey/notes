@@ -1,8 +1,7 @@
 /*
 TODO:
-Fix deleting categories
-Category edit icon on mobile
-
+Figure out why deleted category call 404's
+Figure out why two last cat preferences are made
 Allow imgur users to log into their accounts
 When category deleted and notes moved to General, show notes and sort
 Note sorting
@@ -10,8 +9,8 @@ Category sorting
 Color schemes
 Delete all notes in category
 Sort incoming notes
-scroll to bottom of notes only if already at/near the bottom
-smarter deleting
+Scroll to bottom of notes only if already at/near the bottom
+Smarter deleting
 Tests - at least in-browser ones
 Red/green indicators on status messages
 Check for rate limiting
@@ -385,7 +384,7 @@ var gdonloadfiles = function(files, last) {
   var file;
   var matches;
 
-  for ( var key in files ) {
+  for ( key in files ) {
     if ( files.hasOwnProperty(key) ) {
       new_file = files[key];
 
@@ -409,6 +408,26 @@ var gdonloadfiles = function(files, last) {
 
   if ( last ) {
     send_things_to_gd();
+  }
+};
+
+var send_things_to_gd = function() {
+  for ( var i = 0, l = collections.length; i < l; i++ ) {
+    var collection = collections[i];
+
+    for ( var key in collection.things ) {
+      if ( collection.things.hasOwnProperty(key) ) {
+        var thing = collection.things[key];
+        // Maybe saved but didn't make it to GD
+        if ( !thing.gdfileid ) {
+          gdsavenew(thing, singles[collection.name]);
+        // Deleted remotely
+        } else if ( thing.gdfileid && !gdfiles[thing.gdfileid].found ) {
+          //thing.del();
+          collection.del(key);
+        }
+      }
+    }
   }
 };
 
@@ -437,6 +456,12 @@ var gdload = function() {
   gdloading = true;
   gdstatus('Loading remote data...');
 
+  for ( var key in gdfiles ) {
+    if ( gdfiles.hasOwnProperty(key) ) {
+      gdfiles[key].found = false;
+    }
+  }
+
   gd.loadAllFiles(gdonloadfiles, gdonerrorfiles);
 };
 
@@ -459,7 +484,7 @@ var gdonerror = function(error, resp) {
 gd.load(gdonload, gdonerror);
 
 $(window).bind('focus', function() {
-  //gdload();
+  gdload();
 });
 
 $gdauthorize.bind('click', function() {
@@ -641,26 +666,6 @@ var loader = function(text) {
   }
 
   scroll_notes_window();
-};
-
-var send_things_to_gd = function() {
-  for ( var i = 0, l = collections.length; i < l; i++ ) {
-    var collection = collections[i];
-
-    for ( var key in collection.things ) {
-      if ( collection.things.hasOwnProperty(key) ) {
-        var thing = collection.things[key];
-        // Maybe saved but didn't make it to GD
-        if ( !thing.gdfileid ) {
-          gdsavenew(thing, singles[collection.name]);
-        // Deleted remotely
-        } else if ( thing.gdfileid && !gdfiles[thing.gdfileid].found ) {
-          //thing.del();
-          collection.del(key);
-        }
-      }
-    }
-  }
 };
 
   /////////////////////////////
@@ -1307,7 +1312,8 @@ $document
   .delegate('[data-type="add-category-label"]', 'click', function() {
     $add_category_wrapper.show().find('[data-type="category-title"]').focus();
   })
-  .delegate('[data-type="add-category-label"] [data-type="cancel"]', 'click', function() {
+  .delegate('[data-type="add-category-wrapper"] [data-type="cancel"]', 'click', function(ev) {
+    ev.preventDefault();
     $add_category_wrapper.hide();
   })
   .delegate('[data-type="add-category-wrapper"] form', 'submit', function(ev) {
