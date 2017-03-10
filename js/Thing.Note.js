@@ -29,6 +29,7 @@ Note.prototype.setup = function(params) {
   this.attrs.push(
     {property: 'category', alias: 'c'},
     {property: 'body', alias: 'b'},
+    {property: 'todo', alias: 'l'},
     {property: 'image', alias: 'i'},
     {property: 'deletehash', alias: 'h'} // specific to imgur images
   );

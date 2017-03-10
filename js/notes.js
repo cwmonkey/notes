@@ -665,6 +665,8 @@ var loader = function(text) {
     }
   }
 
+  general_category.update('nodelete', 1);
+
   scroll_notes_window();
 };
 
@@ -701,8 +703,15 @@ var category_load = function(thing) {
   $notes_section.append($category);
   $category.hide();
 
+  //$category.sortable();
+
+  if ( thing.todo ) {
+    $category.addClass('todo_list');
+  }
+
   $categories = $categories.add($category);
 
+  thing.$nav = $thing;
   thing.$category = $category;
   thing.$els = $thing.add($option.add($category));
 
@@ -712,9 +721,18 @@ var category_load = function(thing) {
 };
 
 var categories = category_objs.categories = add_colection('categories', Category,
+// change
 function(thing, changes) {
   if ( active_category && active_category.id === thing.id ) {
     $category_name.html(thing.title);
+  }
+
+  if ( thing.$category ) {
+    if ( thing.todo ) {
+      thing.$category.addClass('todo_list');
+    } else {
+      thing.$category.removeClass('todo_list');
+    }
   }
 
   if ( thing.$els ) {
@@ -726,7 +744,11 @@ function(thing, changes) {
   }
 
   saver();
-}, category_load, function(thing) {
+},
+// load
+category_load,
+// delete
+function(thing) {
   if ( active_category.id === thing.id ) {
     set_active_category(general_category);
   }
@@ -740,6 +762,7 @@ function(thing, changes) {
 // Notes
 
 var notes = category_objs.notes = add_colection('notes', Note,
+// change
 function(thing, changes) {
   if ( changes.body ) {
     var $thing = $(note_tpl(thing));
@@ -763,7 +786,28 @@ function(thing, changes) {
     thing.$el.addClass('saving');
   }
 
+  if ( changes.todo ) {
+    var $todo = thing.$el.find('[data-type="todo"]');
+    if ( thing.todo === 1 ) {
+      $todo.prop({
+        checked: false,
+        indeterminate: true
+      });
+    } else if ( thing.todo === 2 ) {
+      $todo.prop({
+        checked: true,
+        indeterminate: false
+      });
+    } else {
+      $todo.prop({
+        checked: false,
+        indeterminate: false
+      });
+    }
+  }
+
   saver();
+// load
 }, function(thing) {
   var $thing = $(note_tpl(thing));
 
@@ -786,12 +830,26 @@ function(thing, changes) {
   }
   $category.append($thing);
 
+  var $todo = thing.$el.find('[data-type="todo"]');
+  if ( thing.todo === 1 ) {
+    $todo.prop({
+      checked: false,
+      indeterminate: true
+    });
+  } else if ( thing.todo === 2 ) {
+    $todo.prop({
+      checked: true,
+      indeterminate: false
+    });
+  }
+
   $category.find('[data-thing="note"]').order(true, function (el) {
     return $(el).data('__thing').id;
   });
 
   saver();
   scroll_notes_window();
+// delete
 }, function(thing) {
   thing.$el.remove();
 
@@ -801,10 +859,13 @@ function(thing, changes) {
 // Preferences
 
 var preferences = category_objs.preferences = add_colection('preferences', Preference,
+// change
 function(thing, changes) {
   saver();
+// load
 }, function(thing) {
   saver();
+// delete
 }, function(thing) {
   saver();
 });
@@ -839,13 +900,15 @@ var $edit_category = $(add_edit_category_form_tpl({edit: true}));
 $add_note_wrapper.append($add_note);
 $add_category_wrapper.append($add_category);
 
-// Make an undeletable category
-var general_category = {
-  title: 'General'
-};
-
 loading = true;
-general_category = category_load(general_category);
+// Make an undeletable category
+var general_category = categories.add({
+  id: '_',
+  title: 'General',
+  nodelete: 1
+});
+
+//general_category = category_load(general_category);
 // Load local data
 
 var $notes_window = $('[data-type="notes-window"]');
@@ -1098,7 +1161,7 @@ $document
       }
 
       $body.val('');
-    } else {
+    } else if ( body ) {
       var data = $this.serializeObject();
       var note = notes.add(data);
 
@@ -1267,6 +1330,25 @@ $document
 
     has_scrolled = false;
   })
+  // Note checks
+  .delegate('[data-thing="note"] [data-type="todo"]', 'click', function(ev) {
+    ev.preventDefault();
+    var $this = $(this);
+    var $thing = $this.closest('[data-type="tpl"]');
+    var thing = $thing.data('__thing');
+
+    setTimeout(function() {
+      if ( $this.prop('checked') ) {
+        thing.save([{name: 'todo', value: undefined}]);
+      } else if ( $this.prop('indeterminate') ) {
+        thing.save([{name: 'todo', value: 2}]);
+      } else {
+        thing.save([{name: 'todo', value: 1}]);
+      }
+
+      gdsave(thing);
+    }, 0);
+  })
   ;
 
 var has_scrolled = false;
@@ -1320,6 +1402,9 @@ $document
     ev.preventDefault();
     var $this = $(this);
     var data = $this.serializeObject();
+
+    data.todo = data.todo || undefined;
+
     var category = categories.add(data);
 
     gdsavenew(category);
@@ -1338,6 +1423,8 @@ $document
     var thing = $thing.data('__thing');
     var data = $this.serializeArray();
 
+    data.todo = data.todo || undefined;
+
     thing.save(data);
     gdsave(thing);
 
@@ -1352,6 +1439,22 @@ $document
 
     $edit_category.find('[name="id"]').val(thing.id);
     var $title = $edit_category.find('[name="title"]').val(thing.title);
+
+    var $todo = $edit_category.find('[data-type="todo"]').attr('id', 'todo_' + thing.id);
+    $edit_category.find('[data-type="todo_label"]').attr('for', 'todo_' + thing.id);
+
+    if ( thing.todo ) {
+      $todo.prop('checked', true);
+    } else {
+      $todo.prop('checked', false);
+    }
+
+    var $delete = $edit_category.find('[data-type="delete"]');
+    if ( thing.nodelete ) {
+      $delete.hide();
+    } else {
+      $delete.show();
+    }
 
     $wrapper.append($edit_category);
     $title.focus();

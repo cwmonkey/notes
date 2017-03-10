@@ -25,7 +25,9 @@ Category.prototype.setup = function(params) {
   this.type = 'category';
 
   this.attrs.push(
-    {property: 'title', alias: 't'}
+    {property: 'title', alias: 't'},
+    {property: 'todo', alias: 'l'},
+    {property: 'nodelete', alias: 'n'}
   );
 };
 

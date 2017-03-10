@@ -88,15 +88,18 @@ Thing.prototype.init = function() { };
 // Update property, set updated flag
 Thing.prototype.update = function(name, value) {
   me.debug && this.log('.update', name, value);
+  var changes = {};
+  var changed = false;
+
   if ( this[name] !== value ) {
     this[name] = value;
     this.updated = Date.now().toString(36);
+    changes[name] = true;
+    changed = true;
   }
 
-  var changes = {};
-  changes[name] = value;
 
-  if ( this.onChange ) {
+  if ( changed && this.onChange ) {
     this.onChange(this, changes);
   }
 };

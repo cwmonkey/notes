@@ -1,6 +1,6 @@
 {% raw %}
 <script type="text/x-handlebars" data-type="note-tpl">
-  <div class="note" data-thing="note" data-type="tpl">
+  <div class="note" data-thing="note" data-type="tpl" data-id="{{id}}">
     <span class="__notes--nav">
       <menu class="tools">
         <button data-type="edit" class="tool edit">Edit</button>
@@ -8,6 +8,10 @@
         <button data-type="copy" class="tool copy">Copy</button>
       </menu>
     </span>
+    <div class="todo">
+      <input type="checkbox" data-type="todo" class="todo_input" name="todo_{{id}}" id="todo_{{id}}" value="1">
+      <label for="todo_{{id}}" class="todo_check"></label>
+    </div>
     <div class="body cms">
       {{#if image}}
         <div class="note_image_wrapper" data-type="image">
@@ -27,20 +31,18 @@
 </script>
 
 <script type="text/x-handlebars" data-type="category-nav-tpl">
-  <div class="category_nav_wrapper" data-id="{{#if id}}{{id}}{{else}}_{{/if}}" data-type="tpl">
+  <div class="category_nav_wrapper" data-id="{{id}}" data-type="tpl">
     <button class="category_nav" data-type="category-nav" data-value="{{id}}" title="{{title}}">
       <span class="text" data-type="title">{{title}}</span>
     </button>
-    {{#if id}}
-      <button class="edit" data-type="edit">
-        <span class="text">Edit</span>
-      </button>
-    {{/if}}
+    <button class="edit" data-type="edit">
+      <span class="text">Edit</span>
+    </button>
   </div>
 </script>
 
 <script type="text/x-handlebars" data-type="category-tpl">
-  <div class="category" data-id="{{#if id}}{{id}}{{else}}_{{/if}}" data-type="tpl">
+  <div class="category" data-id="{{id}}" data-type="tpl">
   </div>
 </script>
 
@@ -109,13 +111,20 @@
     <form class="category_form">
       {{#if edit}}
         <input type="hidden" name="id">
+        <input type="hidden" name="todo">
       {{/if}}
-      <div class="category_text_wrapper">
+      <p class="category_text_wrapper">
         <input data-type="category-title" class="category_text" type="text" name="title" placeholder="Category title">
-      </div>
+      </p>
+      <label data-type="todo_label">
+        <p>
+          <input data-type="todo" type="checkbox" name="todo" value="1" {{#if todo}}checked="checked"{{/if}}> Todo list
+        </p>
+      </label>
       <input type="submit" class="submit" value="{{#if edit}}Save{{else}}Add{{/if}} Category">
       <button class="cancel" data-type="cancel">Cancel</button>
       <button class="delete" data-type="delete">Delete</button>
+      <button class="save" data-type="save">Save</button>
     </form>
   </div>
 </script>

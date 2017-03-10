@@ -108,6 +108,15 @@ GoogleDriveAPI.prototype.checkAuth = function(onload, onerror) {
   });
 };
 
+GoogleDriveAPI.prototype.loadDrive = function(onload, onerror) {
+  me.debug && me.log('.loadDrive', 'success');
+  gapi.client.load('drive', 'v3', function() {
+    me.debug && me.log('.loadDrive', 'client loaded');
+    // TODO: error checking?
+    onload();
+  });
+};
+
 GoogleDriveAPI.prototype.checkAuthManual = function(onload, onerror) {
   me.debug && me.log('.checkAuthManual');
   var self = this;
@@ -121,11 +130,7 @@ GoogleDriveAPI.prototype.checkAuthManual = function(onload, onerror) {
 
     if (auth_result && !auth_result.error) {
       me.debug && me.log('.checkAuthManual', 'success');
-      gapi.client.load('drive', 'v3', function() {
-        me.debug && me.log('.checkAuthManual', 'client loaded');
-        // TODO: error checking?
-        onload();
-      });
+      self.loadDrive(onload, onerror);
     } else {
       me.debug && me.log('.checkAuthManual', 'failed');
       onerror(self.errors.manual_auth);
@@ -158,6 +163,13 @@ GoogleDriveAPI.prototype.loadAllFiles = function(onload, onerror, page_token) {
   me.debug && me.log('.loadAllFiles', page_token);
   var self = this;
   var request;
+
+  if ( !gapi.client.drive ) {
+    self.loadDrive(function() {
+      self.loadAllFiles(onload, onerror, page_token);
+    }, onerror);
+    return;
+  }
 
   if ( page_token ) {
     request = gapi.client.drive.files.list({

@@ -5,6 +5,15 @@ $delete_color: #de0c27;
 
   background: $secondary_background;
 
+  label {
+    color: lighten($secondary_background, 60%);
+
+    &:focus,
+    &:hover {
+      color: lighten($secondary_background, 80%);
+    }
+  }
+
   .headline {
     color: lighten($secondary_background, 60%);
 
@@ -13,6 +22,7 @@ $delete_color: #de0c27;
     }
   }
 
+  .save,
   .delete,
   .cancel {
     border-color: lighten($secondary_background, 60%);
