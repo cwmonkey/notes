@@ -1149,15 +1149,9 @@ $document
           gdstatus('Failed to delete remote data.');
           console.log(error, resp);
         });*/
-      } else if ( body === '/delete local notes' ) {
-        /*localStorage.removeItem(app_data_name);
-        gdstatus('Deleting all remote data...');
-        gd.deleteFile(filename, function() {
-          gdstatus('Remote data deleted.');
-        }, function(error, resp) {
-          gdstatus('Failed to delete remote data.');
-          console.log(error, resp);
-        });*/
+      } else if ( body === '/delete local data' ) {
+        localStorage.removeItem(app_data_name);
+        document.location.reload();
       }
 
       $body.val('');
