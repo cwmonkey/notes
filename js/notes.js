@@ -458,7 +458,7 @@ var gdonerrorfiles = function(error, resp) {
   gdstatus('Could not load remote data. Trying to re-authorize...');
 
   gd.checkAuth(function() {
-    //gdload();
+    gdload();
   }, gdauthfail);
 };
 
