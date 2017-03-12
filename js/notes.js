@@ -16,7 +16,6 @@ Edit revisions
 Don't show menu when scrolling on ios
 Remember what was being typed per category and have an indicator for text typed when changing categories
 Remember note's edit states
-Fix issue with mobile swapping orientations
 
 */
 
@@ -537,6 +536,14 @@ var to_right = function(do_scroll_width) {
   $app_wrapper.animate({scrollLeft: scroll_width}, 100);
   scroll = scroll_width;
 };
+
+$(window).bind('resize', function() {
+  if ( scroll === 0 ) {
+    to_left();
+  } else {
+    to_right();
+  }
+});
 
 var check_scroll = function() {
   var width = $app_wrapper.width();

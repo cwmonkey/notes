@@ -403,6 +403,11 @@ input {
     position: relative;
     width: 2em;
     cursor: pointer;
+    opacity: .6;
+
+    &:hover {
+      opacity: 1;
+    }
 
     &:before {
       height: 1em;
