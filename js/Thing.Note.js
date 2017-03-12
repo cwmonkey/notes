@@ -30,6 +30,7 @@ Note.prototype.setup = function(params) {
     {property: 'category', alias: 'c'},
     {property: 'body', alias: 'b'},
     {property: 'todo', alias: 'l'},
+    {property: 'order', alias: 'o'},
     {property: 'image', alias: 'i'},
     {property: 'deletehash', alias: 'h'} // specific to imgur images
   );

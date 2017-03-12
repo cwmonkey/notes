@@ -80,6 +80,7 @@ $delete_color: #de0c27;
 
   .note {
     border-color: lighten($primary_color, 70%);
+    background: $background_color;
 
     &.hover {
       background: lighten($primary_color, 80%);

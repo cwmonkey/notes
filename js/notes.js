@@ -1,14 +1,11 @@
 /*
 TODO:
 Figure out why deleted category call 404's
-Figure out why two last cat preferences are made
 Allow imgur users to log into their accounts
-When category deleted and notes moved to General, show notes and sort
 Note sorting
 Category sorting
 Color schemes
 Delete all notes in category
-Sort incoming notes
 Scroll to bottom of notes only if already at/near the bottom
 Smarter deleting
 Tests - at least in-browser ones
@@ -17,9 +14,9 @@ Check for rate limiting
 Show times/edits
 Edit revisions
 Don't show menu when scrolling on ios
-Task list functionality
 Remember what was being typed per category and have an indicator for text typed when changing categories
 Remember note's edit states
+Fix issue with mobile swapping orientations
 
 */
 
@@ -168,6 +165,7 @@ var filename_reg = /^__notes--data--([a-z]+)--([a-zA-Z0-9_]+)/;
 var gdloading = false;
 var filename = app_data_name;
 var gdfiles = {};
+var gdfiles_by_name = {};
 
 var gd = new GoogleDriveAPI({
   clientId: '935193854133-pt3okf2v2qo7mbds6as2l6sll7in68kb.apps.googleusercontent.com'
@@ -196,9 +194,12 @@ var gdsavenew = function(thing) {
   ]);
 
   gdstatus('Adding to Google Drive...');
-  gd.addFile(filename + '--' + thing.type + '--' + thing.id, JSON.stringify(thing.export(true)), function(resp) {
+
+  var gdname = filename + '--' + thing.type + '--' + thing.id;
+  gd.addFile(gdname, JSON.stringify(thing.export(true)), function(resp) {
     gdstatus('Added to Google Drive.');
 
+    gdfiles_by_name[gdname] = resp;
     gdfiles[resp.id] = {
       id: resp.id,
       modifiedTime: resp.modifiedDate
@@ -244,6 +245,7 @@ var gdsave = function(thing) {
   gd.updateFile(file, JSON.stringify(thing.export(true)), function(resp) {
     gdstatus('Saved update to Google Drive.');
 
+    gdfiles_by_name[resp.title] = resp;
     gdfiles[resp.id] = {
       id: resp.id,
       modifiedTime: resp.modifiedDate
@@ -383,8 +385,9 @@ var gdonloadfiles = function(files, last) {
   var new_file;
   var file;
   var matches;
+  var thing;
 
-  for ( key in files ) {
+  for ( var key in files ) {
     if ( files.hasOwnProperty(key) ) {
       new_file = files[key];
 
@@ -392,16 +395,24 @@ var gdonloadfiles = function(files, last) {
       me.debug && me.log('File Meta:', new_file);
       if ( (matches = new_file.name.match(filename_reg)) ) {
         file = gdfiles[key];
-        if ( !file ) {
+        try {
+          thing = collection_obj[plurals[matches[1]]].get(matches[2]);
+        } catch(e) {
+          thing = undefined;
+        }
+
+        if ( !file && !thing ) {
           // download file and save
           gdaddthing(matches[2], matches[1], new_file);
           gdfiles[key] = new_file;
-        } else if ( Date.parse(file.modifiedTime) < Date.parse(new_file.modifiedTime) ) {
+        } else if ( file && Date.parse(file.modifiedTime) < Date.parse(new_file.modifiedTime) ) {
           // download file and update
           gdfiles[key] = new_file;
         } else {
           gdfiles[key] = new_file;
         }
+
+        gdfiles_by_name[new_file.name] = new_file;
       }
     }
   }
@@ -420,7 +431,12 @@ var send_things_to_gd = function() {
         var thing = collection.things[key];
         // Maybe saved but didn't make it to GD
         if ( !thing.gdfileid ) {
-          gdsavenew(thing, singles[collection.name]);
+          var gdfile = gdfiles_by_name[filename + '--' + thing.type + '--' + thing.id];
+          if ( gdfile ) {
+            thing.update('gdfileid', gdfile.id);
+          } else {
+            gdsavenew(thing, singles[collection.name]);
+          }
         // Deleted remotely
         } else if ( thing.gdfileid && !gdfiles[thing.gdfileid].found ) {
           //thing.del();
@@ -499,7 +515,8 @@ $gdsync.bind('click', function() {
  // Swipe to categories
 /////////////////////////////
 
-var $app_wrapper = $('.app_wrapper');
+var $app_wrapper = $('[data-type="notes-wrapper"]');
+//var $notes_wrapper = $('[data-type="notes-wrapper"]');
 
 var scroll = 0;
 var scroll_width;
@@ -702,8 +719,24 @@ var category_load = function(thing) {
   var $category = $(category_tpl(thing));
   $notes_section.append($category);
   $category.hide();
+  $category.sortable({
+    handle: '.handle',
+    axis: 'y',
+    scrollSpeed: 10,
+    update: function( event, ui ) {
+      var $this = ui.item;
+      var thing = $this.data('__thing');
+      var prev = $this.prev().data('__thing');
+      var next = $this.next().data('__thing');
+      var prev_order = parseInt(prev.order || prev.id, 36);
+      var next_order = parseInt(next.order || next.id, 36);
 
-  //$category.sortable();
+      // TODO: After enough sorting it's possible this could be the same as one of the two other numbers
+      var new_order = Math.floor((next_order - prev_order) / 2) + prev_order;
+      thing.update('order', new_order.toString(36));
+      gdsave(thing);
+    }
+  });
 
   if ( thing.todo ) {
     $category.addClass('todo_list');
@@ -844,7 +877,8 @@ function(thing, changes) {
   }
 
   $category.find('[data-thing="note"]').order(true, function (el) {
-    return $(el).data('__thing').id;
+    var thing = $(el).data('__thing');
+    return thing.order || thing.id;
   });
 
   saver();
@@ -1116,6 +1150,8 @@ if ( stored_note_body ) {
   store.remove(note_body_data_name);
 }
 
+var note_down_timeout;
+
 $document
   // Submit when ctrl+enter is pressed
   .delegate('[data-type="note-body"]', 'keydown', function(e) {
@@ -1342,6 +1378,34 @@ $document
 
       gdsave(thing);
     }, 0);
+  })
+  // Note sort
+  .delegate('[data-thing="note"] .handle', 'mouseover', function(ev) {
+    return false;
+  })
+  .delegate('[data-thing="note"] .handle', 'mousedown', function(ev) {
+    var $this = $(this);
+
+    /*$notes_wrapper.css({
+      'overflow-y': 'hidden',
+      '-webkit-overflow-scrolling': 'none'
+    });
+
+    $notes_window.css({
+      'overflow-y': 'hidden',
+      '-webkit-overflow-scrolling': 'none'
+    });*/
+
+    /*clearTimeout(note_down_timeout);
+
+    note_down_timeout = setTimeout(function() {
+      var $category = $this.closest('[data-thing="category"]');
+      $category.sortable();
+      $this.trigger('mousedown');
+    }, 1000);*/
+  })
+  .delegate('[data-thing="note"]', 'mouseup', function(ev) {
+    //clearTimeout(note_down_timeout);
   })
   ;
 
