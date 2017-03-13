@@ -82,7 +82,7 @@ $delete_color: #de0c27;
     border-color: lighten($primary_color, 70%);
     background: $background_color;
 
-    &.hover {
+    &:hover {
       background: lighten($primary_color, 80%);
     }
   }
@@ -143,6 +143,11 @@ $delete_color: #de0c27;
     background: $header_footer_background_color;
     color: $header_footer_color;
     border-color: lighten($primary_color, 70%);
+
+    .remove_image {
+      border-color: $header_footer_color;
+      color: $header_footer_color;
+    }
   }
 
   .submit_note,

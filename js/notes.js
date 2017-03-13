@@ -1,8 +1,12 @@
 /*
 TODO:
+Fix image uploading on iOS
+Show times/edits
+Don't show menu when scrolling on ios
+Remember what was being typed per category and have an indicator for text typed when changing categories
+
 Figure out why deleted category call 404's
 Allow imgur users to log into their accounts
-Note sorting
 Category sorting
 Color schemes
 Delete all notes in category
@@ -11,10 +15,7 @@ Smarter deleting
 Tests - at least in-browser ones
 Red/green indicators on status messages
 Check for rate limiting
-Show times/edits
 Edit revisions
-Don't show menu when scrolling on ios
-Remember what was being typed per category and have an indicator for text typed when changing categories
 Remember note's edit states
 
 */
@@ -804,7 +805,7 @@ function(thing) {
 var notes = category_objs.notes = add_colection('notes', Note,
 // change
 function(thing, changes) {
-  if ( changes.body ) {
+  if ( changes.body || changes.image ) {
     var $thing = $(note_tpl(thing));
 
     // Open links in new window
@@ -1345,7 +1346,7 @@ $document
   })
   // Mobile note tools show
   .delegate('[data-touched="false"]', 'touchstart', function() {
-    $(this).attr('data-touched', undefined);
+    $(this).attr('data-touched', 'true');
   })
   .delegate('[data-touched="false"] [data-thing="note"]', 'mouseover', function() {
     var $this = $(this);
@@ -1387,32 +1388,8 @@ $document
     }, 0);
   })
   // Note sort
-  .delegate('[data-thing="note"] .handle', 'mouseover', function(ev) {
+  .delegate('[data-touched="true"] [data-thing="note"] .handle', 'mouseover', function(ev) {
     return false;
-  })
-  .delegate('[data-thing="note"] .handle', 'mousedown', function(ev) {
-    var $this = $(this);
-
-    /*$notes_wrapper.css({
-      'overflow-y': 'hidden',
-      '-webkit-overflow-scrolling': 'none'
-    });
-
-    $notes_window.css({
-      'overflow-y': 'hidden',
-      '-webkit-overflow-scrolling': 'none'
-    });*/
-
-    /*clearTimeout(note_down_timeout);
-
-    note_down_timeout = setTimeout(function() {
-      var $category = $this.closest('[data-thing="category"]');
-      $category.sortable();
-      $this.trigger('mousedown');
-    }, 1000);*/
-  })
-  .delegate('[data-thing="note"]', 'mouseup', function(ev) {
-    //clearTimeout(note_down_timeout);
   })
   ;
 
