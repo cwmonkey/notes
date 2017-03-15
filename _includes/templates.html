@@ -10,9 +10,11 @@
     </span>
     <div class="handle">
     </div>
-    <div class="todo">
-      <input type="checkbox" data-type="todo" class="todo_input" name="todo_{{id}}" id="todo_{{id}}" value="1">
-      <label for="todo_{{id}}" class="todo_check"></label>
+    <div class="todo_wrapper">
+      <div class="todo">
+        <input type="checkbox" data-type="todo" class="todo_input" name="todo_{{id}}" id="todo_{{id}}" value="1">
+        <label for="todo_{{id}}" class="todo_check"></label>
+      </div>
     </div>
     <div class="body cms">
       {{#if image}}

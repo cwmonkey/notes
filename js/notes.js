@@ -1,6 +1,7 @@
 /*
 TODO:
-Fix image uploading on iOS
+Fix problem with not updating note when app is closed while uploading image
+
 Show times/edits
 Don't show menu when scrolling on ios
 Remember what was being typed per category and have an indicator for text typed when changing categories
@@ -736,11 +737,21 @@ var category_load = function(thing) {
       var thing = $this.data('__thing');
       var prev = $this.prev().data('__thing');
       var next = $this.next().data('__thing');
-      var prev_order = parseInt(prev.order || prev.id, 36);
-      var next_order = parseInt(next.order || next.id, 36);
+      var prev_order = prev ? parseInt(prev.order || prev.id, 36) : 0;
+      var next_order;
+
+      if ( next ) {
+        next_order = parseInt(next.order || next.id, 36);
+      } else if ( prev ) {
+        next_order = prev_order + 1024;
+      } else {
+        return;
+      }
+
+      var diff = next_order - prev_order;
 
       // TODO: After enough sorting it's possible this could be the same as one of the two other numbers
-      var new_order = Math.floor((next_order - prev_order) / 2) + prev_order;
+      var new_order = Math.floor((diff) / 2) + prev_order;
       thing.update('order', new_order.toString(36));
       gdsave(thing);
     }

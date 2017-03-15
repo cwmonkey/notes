@@ -405,19 +405,15 @@ input {
   .handle {
     @extend .fa;
     @extend .fa-arrows-v;
-    position: relative;
     cursor: pointer;
     opacity: 0;
-    padding-right: 10px;
+    padding: 10px 10px 0 0;
 
     :hover &:hover {
       opacity: 1;
     }
 
     &:before {
-      position: relative;
-      top: 50%;
-      transform: translateY(-50%);
       display: block;
       margin-left: 10px;
     }
@@ -428,10 +424,10 @@ input {
   }
 
   .todo {
+    margin-top: 7px;
     display: none;
     position: relative;
     overflow: hidden;
-    flex: none;
     width: 1em;
     height: 1em;
     margin-right: 10px;
@@ -449,6 +445,10 @@ input {
       width: 100%;
       display: block;
       opacity: .6;
+      position: absolute;
+      left: 0;
+      top: 0;
+      z-index: 1;
 
       @extend .fa;
       @extend .fa-circle-thin;
@@ -459,6 +459,11 @@ input {
     }
 
     .todo_input {
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+
       &:checked + .todo_check {
         @extend .fa-check-circle;
       }
@@ -856,6 +861,12 @@ input {
     white-space: normal;
     height: 100%;
     cursor: pointer;
+
+    .note {
+      .delete {
+        display: block;
+      }
+    }
   }
 
   .primary_inner {
