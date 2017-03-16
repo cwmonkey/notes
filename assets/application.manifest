@@ -7,6 +7,8 @@ CACHE MANIFEST
 NETWORK:
 http://i.imgur.com/
 https://i.imgur.com/
+https://apis.google.com/
+https://www.google-analytics.com/
 
 CACHE:
 {{site.baseurl}}/assets/note.svg
