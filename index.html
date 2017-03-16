@@ -1,9 +1,8 @@
 ---
 layout: null
 ---
-
 <!doctype html>
-<html class="no-js" lang="en">
+<html class="no-js" lang="en" {% unless site.local %}manifest="assets/application.manifest"{% endunless %}>
 <head>
 
 <meta charset="utf-8">
@@ -87,9 +86,9 @@ layout: null
   <script>
     // window.debug = true; // This enables debugging for everything
     // The rest enable debugging for specific files
-    window.GoogleDriveAPIDebug = true;
-    window.notesDebug = true;
-    window.ThingDebug = true;
+    //window.GoogleDriveAPIDebug = true;
+    //window.notesDebug = true;
+    //window.ThingDebug = true;
   </script>
   {% for js in site.javascripts %}
     <script src="{{site.baseurl}}/{{ js.src }}" defer></script>
