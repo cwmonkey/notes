@@ -821,6 +821,9 @@ function(thing, changes) {
 
     // Open links in new window
     // TODO: DRY
+    if ( thing.image ) {
+      thing.image = thing.image.replace('http:', '');
+    }
     $thing.find('a').attr('target', '_blank');
 
     thing.$el.replaceWith($thing);
@@ -865,6 +868,9 @@ function(thing, changes) {
 
   // Open links in new window
   // TODO: DRY
+  if ( thing.image ) {
+    thing.image = thing.image.replace('http:', '');
+  }
   $thing.find('a').attr('target', '_blank');
 
   if ( thing.gdsaving ) {
