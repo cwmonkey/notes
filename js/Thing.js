@@ -23,6 +23,8 @@ var Thing = function(params) {
     {property: 'updated', alias: 'u'}
   ];
 
+  this.aliasToProperty = {};
+
   this.type = null;
 
   // For prototyping Thing:
@@ -31,6 +33,7 @@ var Thing = function(params) {
   // Add long properties as attributes to this
   this.attrs.forEach(function(val) {
     self[val.property] = values[val.property] || values[val.alias] || undefined;
+    self.aliasToProperty[val.alias] = val.property;
   });
 
   // Existing things
@@ -102,6 +105,36 @@ Thing.prototype.update = function(name, value) {
   if ( changed && this.onChange ) {
     this.onChange(this, changes);
   }
+};
+
+// Save multiple values with the format {name1: value1, name2: value2, ...}
+Thing.prototype.saveObj = function(values) {
+  me.debug && this.log('.saveObj', values);
+  var self = this;
+  var modified = false;
+  var changes = {};
+
+  for ( var key in values ) {
+    if ( values.hasOwnProperty(key) ) {
+      var name = self.aliasToProperty[key];
+
+      if ( name ) {
+        var value = values[key] || undefined;
+
+        if ( value !== self[name] ) {
+          self[name] = value;
+          modified = true;
+          changes[name] = true;
+        }
+      }
+    }
+  }
+
+  if ( modified ) {
+    this.updated = Date.now().toString(36);
+  }
+
+  this.onChange(this, changes);
 };
 
 // Save multiple values with the format [{name: name1, value: value1}, ...]

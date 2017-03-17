@@ -346,25 +346,34 @@ var plurals = {'note': 'notes', 'category': 'categories', 'preference': 'prefere
 var singles = {'notes': 'note', 'categories': 'category', 'preferences': 'preference'};
 var gdaddthing = function(id, type, file) {
   gdstatus('Retrieving from Google Drive...');
+
   gdqueuedownload(file, function(content) {
     gdstatus('Retrieved from Google Drive.');
+    var thing = collection_obj[plurals[type]].get(id);
+
     var data = content;
+
     if ( typeof content === 'string' ) {
       data = JSON.parse(content);
     }
 
-    data.gdfileid = file.id;
-    data.gdupdated = file.modifiedTime;
-    data.id = id;
+    if ( thing ) {
+      thing.saveObj(data);
+    } else {
+      data.gdfileid = file.id;
+      data.gdupdated = file.modifiedTime;
+      data.id = id;
 
-    var thing = collection_obj[plurals[type]].add(data);
+      thing = collection_obj[plurals[type]].add(data);
 
-    if ( thing.deleted ) {
-      // File got saved after being deleted - shouldn't be possible
-      gddelete(thing);
+      if ( thing.deleted ) {
+        // File got saved after being deleted - shouldn't be possible
+        gddelete(thing);
+      }
     }
   }, function(error, resp) {
     me.debug && me.log('gdaddthing', error, resp);
+
     if ( resp.error.code == 403 ) {
       gdstatus('Google Drive rate limit exceeded.');
       gdratelimited = true;
@@ -391,11 +400,12 @@ var gdonloadfiles = function(files, last) {
   for ( var key in files ) {
     if ( files.hasOwnProperty(key) ) {
       new_file = files[key];
-
       new_file.found = true;
       me.debug && me.log('File Meta:', new_file);
+
       if ( (matches = new_file.name.match(filename_reg)) ) {
         file = gdfiles[key];
+
         try {
           thing = collection_obj[plurals[matches[1]]].get(matches[2]);
         } catch(e) {
@@ -408,6 +418,7 @@ var gdonloadfiles = function(files, last) {
           gdfiles[key] = new_file;
         } else if ( file && Date.parse(file.modifiedTime) < Date.parse(new_file.modifiedTime) ) {
           // download file and update
+          gdaddthing(matches[2], matches[1], new_file);
           gdfiles[key] = new_file;
         } else {
           gdfiles[key] = new_file;
@@ -841,6 +852,16 @@ function(thing, changes) {
     thing.$el.addClass('saving');
   }
 
+  if ( changes.order ) {
+    var id = thing.category || '_';
+    var $category = $categories.filter('[data-id="' + id + '"]');
+
+    $category.find('[data-thing="note"]').order(true, function (el) {
+      var thing = $(el).data('__thing');
+      return thing.order || thing.id;
+    });
+  }
+
   if ( changes.todo ) {
     var $todo = thing.$el.find('[data-type="todo"]');
     if ( thing.todo === 1 ) {
@@ -879,7 +900,7 @@ function(thing, changes) {
   thing.$el = $thing;
   $thing.data('__thing', thing);
   //$notes_section.append($thing);
-  var id = thing.category || "_";
+  var id = thing.category || '_';
   var $category = $categories.filter('[data-id="' + id + '"]');
   // In case we have notes that don't have associated categories.
   // Shouldn't be able to happen
