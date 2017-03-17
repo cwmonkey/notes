@@ -11,9 +11,13 @@ https://apis.google.com/
 https://www.google-analytics.com/
 
 CACHE:
+{{site.baseurl}}/
 {{site.baseurl}}/assets/note.svg
 {{site.baseurl}}/assets/notes-secondary.min.css
 {{site.baseurl}}/fonts/fontawesome-webfont.woff2?v=4.7.0
 {{site.baseurl}}/assets/favicon-16x16.png
 {{site.baseurl}}/assets/favicon-32x32.png
 {{site.baseurl}}/assets/favicon.ico
+{% for js in site.javascripts %}
+{{site.baseurl}}/{{ js.src }}
+{% endfor %}
