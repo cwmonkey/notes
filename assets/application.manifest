@@ -18,6 +18,3 @@ CACHE:
 {{site.baseurl}}/assets/favicon-16x16.png
 {{site.baseurl}}/assets/favicon-32x32.png
 {{site.baseurl}}/assets/favicon.ico
-{% for js in site.javascripts %}
-{{site.baseurl}}/{{ js.src }}
-{% endfor %}
