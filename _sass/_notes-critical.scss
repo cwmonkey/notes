@@ -383,6 +383,7 @@ input {
     border-top: 1px solid;
     position: relative;
     display: flex;
+    flex-wrap: wrap;
 
     &:last-child {
       padding-bottom: 15px;
@@ -695,6 +696,7 @@ input {
       border-radius: 5px;
       padding: 10px;
       margin-top: 10px;
+      width: 100%;
     }
   }
 
@@ -753,7 +755,7 @@ input {
     box-shadow: 0px 0px 8px 0px rgba(0, 0, 0, .3);
 
     textarea {
-      max-height: 20vh;
+      max-height: 40vh;
     }
   }
 

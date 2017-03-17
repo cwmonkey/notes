@@ -1295,7 +1295,7 @@ $document
     }
   })
   .delegate('[data-type="remove-image"]', 'click', reset_upload_image)
-  .delegate('[data-type="add-note"] textarea', 'input drop paste cut delete click', function() {
+  .delegate('[data-type="add-note-wrapper"] textarea', 'input drop paste cut delete click', function() {
     autosize(this);
   })
   // Delete Note
