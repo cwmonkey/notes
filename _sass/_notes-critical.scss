@@ -339,6 +339,10 @@ input {
     }
   }
 
+  .gd_sync {
+    display: none !important;
+  }
+
   .notes_wrapper {
     flex: 1;
     display: flex;
