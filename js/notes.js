@@ -80,6 +80,13 @@ jQuery.fn.order = function(asc, fn) {
   });
 };
 
+var note_order = function (el) {
+  var thing = $(el).data('__thing');
+  var ret = parseInt(thing.order || thing.id, 36);
+
+  return ret;
+};
+
   /////////////////////////////
  // Textarea resizer
 /////////////////////////////
@@ -739,7 +746,7 @@ var category_load = function(thing) {
   var $category = $(category_tpl(thing));
   $notes_section.append($category);
   $category.hide();
-  $category.sortable({
+  $category.find('[data-note-list]').sortable({
     handle: '.handle',
     axis: 'y',
     scrollSpeed: 10,
@@ -763,8 +770,11 @@ var category_load = function(thing) {
 
       // TODO: After enough sorting it's possible this could be the same as one of the two other numbers
       var new_order = Math.floor((diff) / 2) + prev_order;
-      thing.update('order', new_order.toString(36));
-      gdsave(thing);
+
+      setTimeout(function() {
+        thing.update('order', new_order.toString(36));
+        gdsave(thing);
+      }, 0);
     }
   });
 
@@ -852,34 +862,45 @@ function(thing, changes) {
     thing.$el.addClass('saving');
   }
 
-  if ( changes.order ) {
+  if ( changes.todo ) {
     var id = thing.category || '_';
     var $category = $categories.filter('[data-id="' + id + '"]');
 
-    $category.find('[data-thing="note"]').order(true, function (el) {
-      var thing = $(el).data('__thing');
-      return thing.order || thing.id;
-    });
-  }
-
-  if ( changes.todo ) {
     var $todo = thing.$el.find('[data-type="todo"]');
     if ( thing.todo === 1 ) {
+      $category.find('[data-type="todo-sticky"]').append(thing.$el);
+
       $todo.prop({
         checked: false,
         indeterminate: true
       });
     } else if ( thing.todo === 2 ) {
+      $category.find('[data-type="todo-done"]').append(thing.$el);
+
       $todo.prop({
         checked: true,
         indeterminate: false
       });
     } else {
+      $category.find('[data-type="todo-new"]').append(thing.$el);
+
       $todo.prop({
         checked: false,
         indeterminate: false
       });
     }
+
+    changes.order = true;
+  }
+
+  if ( changes.order ) {
+    var id = thing.category || '_';
+    var $category = $categories.filter('[data-id="' + id + '"]');
+
+    // TODO: DRY
+    $category.find('[data-note-list="true"]').each(function() {
+      $(this).find('[data-thing="note"]').order(true, note_order);
+    });
   }
 
   saver();
@@ -909,22 +930,29 @@ function(thing, changes) {
   }
   $category.append($thing);
 
+  // TODO: DRY
   var $todo = thing.$el.find('[data-type="todo"]');
   if ( thing.todo === 1 ) {
+    $category.find('[data-type="todo-sticky"]').append(thing.$el);
+
     $todo.prop({
       checked: false,
       indeterminate: true
     });
   } else if ( thing.todo === 2 ) {
+    $category.find('[data-type="todo-done"]').append(thing.$el);
+
     $todo.prop({
       checked: true,
       indeterminate: false
     });
+  } else {
+    $category.find('[data-type="todo-new"]').append(thing.$el);
   }
 
-  $category.find('[data-thing="note"]').order(true, function (el) {
-    var thing = $(el).data('__thing');
-    return thing.order || thing.id;
+  // TODO: DRY
+  $category.find('[data-note-list="true"]').each(function() {
+    $(this).find('[data-thing="note"]').order(true, note_order);
   });
 
   saver();
@@ -1250,6 +1278,10 @@ $document
       gdsavenew(note);
     }
 
+    setTimeout(function() {
+      $body.trigger('change');
+    }, 0);
+
     store.remove(note_body_data_name);
   })
   .delegate('[data-type="upload-image-file"]', 'change', function() {
@@ -1320,7 +1352,7 @@ $document
     }
   })
   .delegate('[data-type="remove-image"]', 'click', reset_upload_image)
-  .delegate('[data-type="add-note-wrapper"] textarea', 'input drop paste cut delete click', function() {
+  .delegate('[data-type="add-note-wrapper"] textarea', 'input drop paste cut delete click change', function() {
     autosize(this);
   })
   // Delete Note

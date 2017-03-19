@@ -379,11 +379,16 @@ input {
     display: none;
   }
 
+  $note_handle_width: 26px;
+
   .note {
     border-top: 1px solid;
     position: relative;
-    display: flex;
-    flex-wrap: wrap;
+    //display: flex;
+    flex-wrap: nowrap;
+    word-wrap: break-word;
+    max-width: 100%;
+    padding-left: $note_handle_width;
 
     &:last-child {
       padding-bottom: 15px;
@@ -408,7 +413,12 @@ input {
     @extend .fa-arrows-v;
     cursor: pointer;
     opacity: 0;
-    padding: 10px 10px 0 0;
+    padding: 10px 0;
+    width: $note_handle_width;
+    text-align: center;
+    position: absolute;
+    left: 0;
+    top: 0;
 
     :hover &:hover {
       opacity: 1;
@@ -416,7 +426,6 @@ input {
 
     &:before {
       display: block;
-      margin-left: 10px;
     }
 
     @media (max-width: 768px) {
@@ -424,14 +433,20 @@ input {
     }
   }
 
+  $note_todo_width: 36px;
+
+  .todo_wrapper {
+    height: 100%;
+    position: absolute;
+    left: $note_handle_width;
+    top: 0;
+  }
+
   .todo {
-    margin-top: 7px;
     display: none;
-    position: relative;
     overflow: hidden;
     width: 1em;
     height: 1em;
-    margin-right: 10px;
     font-size: 2em;
     -webkit-touch-callout: none; /* iOS Safari */
       -webkit-user-select: none; /* Safari */
@@ -441,6 +456,7 @@ input {
               user-select: none; /* Non-prefixed version, currently
                                     supported by Chrome and Opera */
     .todo_check {
+      padding-top: 7px;
       cursor: pointer;
       height: 100%;
       width: 100%;
@@ -476,6 +492,10 @@ input {
   }
 
   .todo_list {
+    .note {
+      padding-left: $note_handle_width + $note_todo_width;
+    }
+
     .todo {
       display: block;
     }
