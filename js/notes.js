@@ -1179,7 +1179,7 @@ var add_edit_note = function(note, do_scroll) {
           {name: 'deletehash', value: data.data.deletehash}
         ]);
 
-        gdsave(thing);
+        gdsave(note);
 
         if ( do_scroll ) {
           scroll_notes_window();
