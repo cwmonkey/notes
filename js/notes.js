@@ -1479,9 +1479,13 @@ $document
   })
   .delegate('[data-thing="note"]', 'touchend', function() {
     var $this = $(this);
+    var do_focus = !$this.hasClass('focus');
+
     if ( !has_scrolled ) {
       $('[data-thing="note"]').removeClass('focus');
-      $this.addClass('focus');
+      if ( do_focus ) {
+        $this.addClass('focus');
+      }
     }
 
     has_scrolled = false;
