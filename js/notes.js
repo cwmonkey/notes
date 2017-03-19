@@ -1383,7 +1383,6 @@ $document
     $edit_note_id.val(note_edit.id);
     $note.append($edit_note);
     $edit_note_body.focus();
-    scroll_notes_window();
   })
   .delegate('[data-thing="note"] form', 'submit', function(ev) {
     ev.preventDefault();
