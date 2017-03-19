@@ -41,8 +41,9 @@ layout: null
     <h2 class="headline">Categories <button class="add" data-type="add-category-label">Add Category</button></h2>
     <div data-type="add-category-wrapper" class="add_category_wrapper"></div>
     <nav class="category_navs" data-type="category-navs"></nav>
-  </section>
-  <section data-type="primary" class="primary"><div class="primary_inner">
+  </section>{% comment %}
+    Welp, display:table and flexbox failed me again
+  {% endcomment %}<section data-type="primary" class="primary"><div class="primary_inner">
     <div class="header">
       <div class="banner">
         <div class="show_wrapper">
