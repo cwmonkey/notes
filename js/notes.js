@@ -805,6 +805,16 @@ function(thing, changes) {
     }
   }
 
+  if ( changes.todo ) {
+    var fnotes = notes.getByParams({category: thing.id});
+
+    for ( var i = 0, note; (note = fnotes[i]); i++ ) {
+      arrange_note(note);
+    }
+
+    changes.order = true;
+  }
+
   if ( thing.$els ) {
     thing.$els.find('[data-type="title"]').html(thing.title);
 
@@ -816,6 +826,7 @@ function(thing, changes) {
   if ( changes.order ) {
     // TODO: DRY
     $category_navs_section.children().order(true, note_order);
+    scroll_notes_window();
   }
 
   saver();
@@ -835,6 +846,31 @@ function(thing) {
 });
 
 // Notes
+
+var arrange_note = function(thing) {
+  var id = thing.category || '_';
+  var category = categories.get(thing.category) || general_category;
+  var $category = category.$category;
+
+  var $todo = thing.$el.find('[data-type="todo"]');
+  if ( thing.todo && category.todo ) {
+    $category.find('[data-type="todo-done"]').append(thing.$el);
+
+    $todo.prop({
+      checked: true,
+      indeterminate: false
+    });
+  } else if ( thing.sticky ) {
+    $category.find('[data-type="notes-sticky"]').append(thing.$el);
+  } else {
+    $category.find('[data-type="todo-new"]').append(thing.$el);
+
+    $todo.prop({
+      checked: false,
+      indeterminate: false
+    });
+  }
+};
 
 var notes = category_objs.notes = add_colection('notes', Note,
 // change
@@ -865,28 +901,7 @@ function(thing, changes) {
   }
 
   if ( changes.todo || changes.sticky ) {
-    var id = thing.category || '_';
-    var category = categories.get(thing.category) || general_category;
-    var $category = category.$category;
-
-    var $todo = thing.$el.find('[data-type="todo"]');
-    if ( thing.todo && category.todo ) {
-      $category.find('[data-type="todo-done"]').append(thing.$el);
-
-      $todo.prop({
-        checked: true,
-        indeterminate: false
-      });
-    } else if ( thing.sticky ) {
-      $category.find('[data-type="notes-sticky"]').append(thing.$el);
-    } else {
-      $category.find('[data-type="todo-new"]').append(thing.$el);
-
-      $todo.prop({
-        checked: false,
-        indeterminate: false
-      });
-    }
+    arrange_note(thing);
 
     changes.order = true;
   }
@@ -928,28 +943,7 @@ function(thing, changes) {
   }
   $category.append($thing);
 
-  // TODO: DRY
-  var category = categories.get(thing.category) || general_category;
-  var $category = category.$category;
-
-  var $todo = thing.$el.find('[data-type="todo"]');
-  if ( thing.todo && category.todo ) {
-    $category.find('[data-type="todo-done"]').append(thing.$el);
-
-    $todo.prop({
-      checked: true,
-      indeterminate: false
-    });
-  } else if ( thing.sticky ) {
-    $category.find('[data-type="notes-sticky"]').append(thing.$el);
-  } else {
-    $category.find('[data-type="todo-new"]').append(thing.$el);
-
-    $todo.prop({
-      checked: false,
-      indeterminate: false
-    });
-  }
+  arrange_note(thing);
 
   // TODO: DRY
   $category.find('[data-note-list="true"]').each(function() {
