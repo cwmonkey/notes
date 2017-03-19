@@ -344,6 +344,7 @@ var gdqueuedownload = function(file, onload, onerror) {
   }
 };
 
+var gdsavingthing = false;
 var plurals = {'note': 'notes', 'category': 'categories', 'preference': 'preferences'};
 var singles = {'notes': 'note', 'categories': 'category', 'preferences': 'preference'};
 var gdaddthing = function(id, type, file) {
@@ -360,7 +361,9 @@ var gdaddthing = function(id, type, file) {
     }
 
     if ( thing ) {
+      gdsavingthing = true;
       thing.saveObj(data);
+      gdsavingthing = false;
     } else {
       data.gdfileid = file.id;
       data.gdupdated = file.modifiedTime;
@@ -513,7 +516,9 @@ var gdonerror = function(error, resp) {
 
 gd.load(gdonload, gdonerror);
 
+var do_auto_switch_category = true;
 $(window).bind('focus', function() {
+  do_auto_switch_category = true;
   gdload();
 });
 
@@ -604,6 +609,7 @@ $document
   .delegate('[data-type="show-categories"]', 'click', function(e) {
     e.preventDefault();
     e.stopPropagation();
+    do_auto_switch_category = false;
 
     if ( scroll === 0 ) {
       to_right(true);
@@ -964,8 +970,11 @@ function(thing, changes) {
 var preferences = category_objs.preferences = add_colection('preferences', Preference,
 // change
 function(thing, changes) {
-  if ( thing.id === 'last_category' ) {
-    _set_active_category(categories.get(thing.value));
+  if ( thing.id === 'last_category' && changes.value ) {
+    if ( !gdsavingthing || gdsavingthing && do_auto_switch_category ) {
+      _set_active_category(categories.get(thing.value));
+      do_auto_switch_category = false;
+    }
   }
 
   saver();
