@@ -87,6 +87,10 @@ $delete_color: #de0c27;
     }
   }
 
+  .notes_sticky .note {
+    background: lighten($header_footer_background_color, 45%);
+  }
+
   .tools {
     border-color: lighten($primary_color, 70%);
     background: $background_color;

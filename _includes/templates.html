@@ -3,17 +3,19 @@
   <div class="note" data-thing="note" data-type="tpl" data-id="{{id}}">
     <span class="__notes--nav">
       <menu class="tools">
+        <button data-type="sticky" class="tool sticky">Sticky</button>
+        <button data-type="copy" class="tool copy">Copy</button>
         <button data-type="edit" class="tool edit">Edit</button>
         <button data-type="delete" class="tool delete">Delete</button>
-        <button data-type="copy" class="tool copy">Copy</button>
       </menu>
     </span>
     <div class="handle">
     </div>
     <div class="todo_wrapper">
       <div class="todo">
-        <input type="checkbox" data-type="todo" class="todo_input" name="todo_{{id}}" id="todo_{{id}}" value="1">
-        <label for="todo_{{id}}" class="todo_check"></label>
+        <button class="todo_check" data-type="todo">
+          Change ToDo
+        </button>
       </div>
     </div>
     <div class="body cms">
@@ -47,9 +49,9 @@
 
 <script type="text/x-handlebars" data-type="category-tpl">
   <div class="category" data-id="{{id}}" data-type="tpl" data-thing="category">
-    <div data-note-list="true" data-type="todo-done"></div>
+    <div data-note-list="true" data-type="todo-done" class="todo_done"></div>
     <div data-note-list="true" data-type="todo-new"></div>
-    <div data-note-list="true" data-type="todo-sticky"></div>
+    <div data-note-list="true" data-type="notes-sticky" class="notes_sticky"></div>
   </div>
 </script>
 

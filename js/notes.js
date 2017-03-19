@@ -864,25 +864,21 @@ function(thing, changes) {
     thing.$el.addClass('saving');
   }
 
-  if ( changes.todo ) {
+  if ( changes.todo || changes.sticky ) {
     var id = thing.category || '_';
-    var $category = $categories.filter('[data-id="' + id + '"]');
+    var category = categories.get(thing.category) || general_category;
+    var $category = category.$category;
 
     var $todo = thing.$el.find('[data-type="todo"]');
-    if ( thing.todo === 1 ) {
-      $category.find('[data-type="todo-sticky"]').append(thing.$el);
-
-      $todo.prop({
-        checked: false,
-        indeterminate: true
-      });
-    } else if ( thing.todo === 2 ) {
+    if ( thing.todo && category.todo ) {
       $category.find('[data-type="todo-done"]').append(thing.$el);
 
       $todo.prop({
         checked: true,
         indeterminate: false
       });
+    } else if ( thing.sticky ) {
+      $category.find('[data-type="notes-sticky"]').append(thing.$el);
     } else {
       $category.find('[data-type="todo-new"]').append(thing.$el);
 
@@ -933,23 +929,26 @@ function(thing, changes) {
   $category.append($thing);
 
   // TODO: DRY
-  var $todo = thing.$el.find('[data-type="todo"]');
-  if ( thing.todo === 1 ) {
-    $category.find('[data-type="todo-sticky"]').append(thing.$el);
+  var category = categories.get(thing.category) || general_category;
+  var $category = category.$category;
 
-    $todo.prop({
-      checked: false,
-      indeterminate: true
-    });
-  } else if ( thing.todo === 2 ) {
+  var $todo = thing.$el.find('[data-type="todo"]');
+  if ( thing.todo && category.todo ) {
     $category.find('[data-type="todo-done"]').append(thing.$el);
 
     $todo.prop({
       checked: true,
       indeterminate: false
     });
+  } else if ( thing.sticky ) {
+    $category.find('[data-type="notes-sticky"]').append(thing.$el);
   } else {
     $category.find('[data-type="todo-new"]').append(thing.$el);
+
+    $todo.prop({
+      checked: false,
+      indeterminate: false
+    });
   }
 
   // TODO: DRY
@@ -1487,25 +1486,39 @@ $document
   // Note checks
   .delegate('[data-thing="note"] [data-type="todo"]', 'click', function(ev) {
     ev.preventDefault();
+    // TODO: DRY
     var $this = $(this);
     var $thing = $this.closest('[data-type="tpl"]');
     var thing = $thing.data('__thing');
+    var value;
 
-    setTimeout(function() {
-      if ( $this.prop('checked') ) {
-        thing.save([{name: 'todo', value: undefined}]);
-      } else if ( $this.prop('indeterminate') ) {
-        thing.save([{name: 'todo', value: 2}]);
-      } else {
-        thing.save([{name: 'todo', value: 1}]);
-      }
+    if ( !thing.todo ) {
+      value = 1;
+    }
 
-      gdsave(thing);
-    }, 0);
+    thing.update('todo', value);
+
+    gdsave(thing);
   })
   // Note sort
   .delegate('[data-touched="true"] [data-thing="note"] .handle', 'mouseover', function(ev) {
     return false;
+  })
+  // Sticky Note
+  .delegate('[data-type="notes-window"] [data-type="sticky"]', 'click', function(ev) {
+    ev.preventDefault();
+    var $this = $(this);
+    var $thing = $this.closest('[data-type="tpl"]');
+    var thing = $thing.data('__thing');
+    var value;
+
+    if ( !thing.sticky ) {
+      value = 1;
+    }
+
+    thing.update('sticky', value);
+
+    gdsave(thing);
   })
   ;
 

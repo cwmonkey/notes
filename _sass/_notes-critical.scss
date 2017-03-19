@@ -410,7 +410,7 @@ input {
 
   .handle {
     @extend .fa;
-    @extend .fa-arrows-v;
+    @extend .fa-sort;
     cursor: pointer;
     opacity: 0;
     padding: 10px 0;
@@ -448,47 +448,38 @@ input {
     width: 1em;
     height: 1em;
     font-size: 2em;
-    -webkit-touch-callout: none; /* iOS Safari */
-      -webkit-user-select: none; /* Safari */
-       -khtml-user-select: none; /* Konqueror HTML */
-         -moz-user-select: none; /* Firefox */
-          -ms-user-select: none; /* Internet Explorer/Edge */
-              user-select: none; /* Non-prefixed version, currently
-                                    supported by Chrome and Opera */
-    .todo_check {
-      padding-top: 7px;
-      cursor: pointer;
-      height: 100%;
-      width: 100%;
-      display: block;
-      opacity: .6;
-      position: absolute;
-      left: 0;
-      top: 0;
-      z-index: 1;
+  }
 
-      @extend .fa;
-      @extend .fa-circle-thin;
+  .todo_check {
+    padding-top: 7px;
+    cursor: pointer;
+    height: 100%;
+    width: 100%;
+    display: block;
+    opacity: .6;
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 1;
+    @include hide-text;
 
-      &:hover {
-        opacity: 1;
-      }
+    @extend .fa;
+    @extend .fa-circle-thin;
+
+    &:hover {
+      opacity: 1;
     }
 
-    .todo_input {
+    &:before {
       position: absolute;
+      text-indent: 0;
       left: 0;
-      top: 0;
-      opacity: 0;
-
-      &:checked + .todo_check {
-        @extend .fa-check-circle;
-      }
-
-      &:indeterminate + .todo_check {
-        @extend .fa-clock-o;
-      }
+      top: 6px;
     }
+  }
+
+  .todo_done .todo_check {
+    @extend .fa-check-circle;
   }
 
   .todo_list {
@@ -558,6 +549,23 @@ input {
       @include center;
       @extend .fa;
       @extend .fa-files-o;
+      position: absolute;
+      text-indent: 0;
+    }
+
+    &.sticky:before {
+      @include center;
+      @extend .fa;
+      @extend .fa-caret-down;
+      position: absolute;
+      text-indent: 0;
+      margin-top: -2px;
+    }
+
+    &.sticky:after {
+      @include center;
+      @extend .fa;
+      @extend .fa-window-minimize:before;
       position: absolute;
       text-indent: 0;
     }
