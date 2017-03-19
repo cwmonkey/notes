@@ -1171,11 +1171,15 @@ var add_edit_note = function(note, do_scroll) {
         imgur.delete(note.deletehash);
       }
 
+      gdstatus('Uploading file to Imgur...');
       imgur.upload(file, function(data) {
+        gdstatus('File uploaded to Imgur.');
         note.save([
           {name: 'image', value: data.data.link},
           {name: 'deletehash', value: data.data.deletehash}
         ]);
+
+        gdsave(thing);
 
         if ( do_scroll ) {
           scroll_notes_window();
