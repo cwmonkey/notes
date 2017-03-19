@@ -2,22 +2,17 @@
 TODO:
 Fix problem with not updating note when app is closed while uploading image
 
-Show times/edits
 Don't show menu when scrolling on ios
 Remember what was being typed per category and have an indicator for text typed when changing categories
 
 Figure out why deleted category call 404's
-Allow imgur users to log into their accounts
-Category sorting
 Color schemes
 Delete all notes in category
-Scroll to bottom of notes only if already at/near the bottom
 Smarter deleting
 Tests - at least in-browser ones
 Red/green indicators on status messages
 Check for rate limiting
 Edit revisions
-Remember note's edit states
 
 */
 
@@ -82,7 +77,7 @@ jQuery.fn.order = function(asc, fn) {
 
 var note_order = function (el) {
   var thing = $(el).data('__thing');
-  var ret = parseInt(thing.order || thing.id, 36);
+  var ret = parseInt(thing.order || thing.id, 36) || 1000;
 
   return ret;
 };
@@ -788,6 +783,8 @@ var category_load = function(thing) {
   thing.$category = $category;
   thing.$els = $thing.add($option.add($category));
 
+  $category_navs_section.children().order(true, note_order);
+
   saver();
 
   return thing;
@@ -814,6 +811,11 @@ function(thing, changes) {
     if ( thing.saving ) {
       thing.$els.addClass('saving');
     }
+  }
+
+  if ( changes.order ) {
+    // TODO: DRY
+    $category_navs_section.children().order(true, note_order);
   }
 
   saver();
@@ -1011,6 +1013,40 @@ var $edit_category = $(add_edit_category_form_tpl({edit: true}));
 
 $add_note_wrapper.append($add_note);
 $add_category_wrapper.append($add_category);
+
+// Make categories sortable
+// TODO: DRY
+$category_navs_section.sortable({
+  axis: 'y',
+  scrollSpeed: 10,
+  cancel: '',
+  update: function( event, ui ) {
+    var $this = ui.item;
+    var thing = $this.data('__thing');
+    var prev = $this.prev().data('__thing');
+    var next = $this.next().data('__thing');
+    var prev_order = prev ? parseInt(prev.order || prev.id, 36) || 0 : 0;
+    var next_order;
+
+    if ( next ) {
+      next_order = parseInt(next.order || next.id, 36) || 0;
+    } else if ( prev ) {
+      next_order = prev_order + 1024;
+    } else {
+      return;
+    }
+
+    var diff = next_order - prev_order;
+
+    // TODO: After enough sorting it's possible this could be the same as one of the two other numbers
+    var new_order = Math.floor((diff) / 2) + prev_order;
+
+    setTimeout(function() {
+      thing.update('order', new_order.toString(36));
+      gdsave(thing);
+    }, 0);
+  }
+});
 
 loading = true;
 // Make an undeletable category

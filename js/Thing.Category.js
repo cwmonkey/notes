@@ -27,6 +27,7 @@ Category.prototype.setup = function(params) {
   this.attrs.push(
     {property: 'title', alias: 't'},
     {property: 'todo', alias: 'l'},
+    {property: 'order', alias: 'o'},
     {property: 'nodelete', alias: 'n'}
   );
 };
