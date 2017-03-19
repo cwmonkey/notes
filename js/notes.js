@@ -969,6 +969,10 @@ function(thing, changes) {
 var preferences = category_objs.preferences = add_colection('preferences', Preference,
 // change
 function(thing, changes) {
+  if ( thing.id === 'last_category' ) {
+    _set_active_category(categories.get(thing.value));
+  }
+
   saver();
 // load
 }, function(thing) {
@@ -1049,37 +1053,40 @@ if ( last_category && last_category.value ) {
 var $category_name = $('[data-type="category-name"]');
 var $category_input = $add_note.find('[name="category"]');
 
-var set_active_category = function(thing, skip_save) {
+var _set_active_category = function(thing) {
+  thing = thing || general_category;
   $categories.hide().filter('[data-id="' + (thing.id || '_') + '"]').show();
   $category_navs.removeClass('active').filter('[data-id="' + (thing.id || '_') + '"]').addClass('active');
   $category_name.html(thing.title);
   to_right(true);
   scroll_notes_window();
   $category_input.val(thing.id);
-
-  if ( !skip_save ) {
-    var last_category = preferences.get('last_category');
-    if ( thing.id && !last_category ) {
-      last_category = preferences.add({
-        id: 'last_category',
-        value: thing.id
-      });
-      gdsavenew(last_category);
-    } else if ( !thing.id && last_category ) {
-      last_category.del();
-      gddelete(last_category);
-    } else {
-      last_category.save([
-        {name: 'value', value: thing.id}
-      ]);
-      gdsave(last_category);
-    }
-  }
-
   active_category = thing;
 };
 
-set_active_category(active_category, true);
+var set_active_category = function(thing) {
+  var last_category = preferences.get('last_category');
+  // Don't think this can happen anymore
+  if ( thing.id && !last_category ) {
+    last_category = preferences.add({
+      id: 'last_category',
+      value: thing.id
+    });
+    gdsavenew(last_category);
+  // Don't think this can happen anymore
+  } else if ( !thing.id && last_category ) {
+    last_category.del();
+    gddelete(last_category);
+  // It will always be this
+  } else {
+    last_category.save([
+      {name: 'value', value: thing.id}
+    ]);
+    gdsave(last_category);
+  }
+};
+
+_set_active_category(active_category);
 
 loading = false;
 
