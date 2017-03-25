@@ -130,11 +130,11 @@ new Clipboard('.copy', {
 /////////////////////////////
 
 var converter = new showdown.Converter({
-  tasklists: false,
   tables: true,
   strikethrough: true,
   simplifiedAutoLink: true,
   simpleLineBreaks: true,
+  literalMidWordUnderscores: true
 });
 
 var md = function(text) {
@@ -362,6 +362,8 @@ var gdaddthing = function(id, type, file) {
 
     if ( thing ) {
       gdsavingthing = true;
+      data.f = file.id;
+      data.p = file.modifiedTime;
       thing.saveObj(data);
       gdsavingthing = false;
     } else {
@@ -747,6 +749,7 @@ var category_load = function(thing) {
   var $category = $(category_tpl(thing));
   $notes_section.append($category);
   $category.hide();
+  // TODO: DRY
   $category.find('[data-note-list]').sortable({
     handle: '.handle',
     axis: 'y',
@@ -1636,6 +1639,42 @@ $document
 
     $wrapper.append($edit_category);
     $title.focus();
+  })
+  ;
+
+// Other stuff
+
+$document
+  .delegate('[data-type="notes"] a', 'click', function(ev) {
+    var url = this.href;
+    var iframe = document.createElement('iframe');
+    var iframeDoc;
+    var openArgs;
+    var script;
+    var isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+    if ( isSafari ) {
+      ev.preventDefault();
+      iframe.sandbox = 'allow-popups allow-same-origin allow-scripts';
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+
+      openArgs = '"' + url + '"';
+
+      script = iframeDoc.createElement('script');
+      script.type = 'text/javascript';
+      script.text = 'window.parent = null; window.top = null;' +
+        'window.frameElement = null; var child = window.open(' + openArgs + ');' +
+        'child.opener = null';
+      iframeDoc.body.appendChild(script);
+      iframe.contentWindow.child;
+
+      document.body.removeChild(iframe);
+    } else {
+      this.rel = 'noopener noreferrer';
+      this.target = '_blank';
+    }
   })
   ;
 
