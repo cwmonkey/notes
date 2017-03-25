@@ -575,6 +575,16 @@ input {
     }
   }
 
+  .notes_sticky .tool {
+    &.sticky:before {
+      @extend .fa-caret-up;
+    }
+
+    &.sticky:after {
+      display: none;
+    }
+  }
+
   // Note image
 
   .note_image_wrapper {

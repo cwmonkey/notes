@@ -1515,7 +1515,7 @@ $document
     return false;
   })
   // Sticky Note
-  .delegate('[data-type="notes-window"] [data-type="sticky"]', 'click', function(ev) {
+  .delegate('[data-type="notes-window"] [data-type="sticky"]', 'touchstart click', function(ev) {
     ev.preventDefault();
     var $this = $(this);
     var $thing = $this.closest('[data-type="tpl"]');
